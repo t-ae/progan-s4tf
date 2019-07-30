@@ -1,4 +1,4 @@
-# GAN like Progressively growing of GANs on Swift for TensorFlow
+# Progressively growing of GANs on Swift for TensorFlow
 
 Paper of ProGAN:
 https://arxiv.org/abs/1710.10196
