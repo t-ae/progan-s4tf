@@ -54,61 +54,60 @@ struct DiscriminatorLastBlock: Layer {
 
 public struct Discriminator: Layer {
     
-    var lastBlock: DiscriminatorLastBlock
+    var lastBlock = DiscriminatorLastBlock()
     
-    var blocks: [DiscriminatorBlock]
+    var blocks: [DiscriminatorBlock] = []
     
-    var fromRGB: [WSConv2D]
+    var fromRGB1 = WSConv2D(inputChannels: 3, outputChannels: 1, kernelSize: (1, 1))
+    var fromRGB2 = WSConv2D(inputChannels: 3, outputChannels: 1024, kernelSize: (1, 1))
     
-    var downsample: AvgPool2D<Float>
-    
-    public init() {
-        lastBlock = DiscriminatorLastBlock()
+    var downsample = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
         
-        blocks = [
-            DiscriminatorBlock(inputChannels: 128,outputChannels: 256),
-            DiscriminatorBlock(inputChannels: 256,outputChannels: 256),
-            DiscriminatorBlock(inputChannels: 256,outputChannels: 512),
-            DiscriminatorBlock(inputChannels: 512,outputChannels: 512),
-            DiscriminatorBlock(inputChannels: 512,outputChannels: 1024),
-            DiscriminatorBlock(inputChannels: 1024,outputChannels: 1024),
-        ]
-        
-        fromRGB = [
-            WSConv2D(inputChannels: 3, outputChannels: 128, kernelSize: (1, 1)), // lv6
-            WSConv2D(inputChannels: 3, outputChannels: 256, kernelSize: (1, 1)),
-            WSConv2D(inputChannels: 3, outputChannels: 256, kernelSize: (1, 1)),
-            WSConv2D(inputChannels: 3, outputChannels: 512, kernelSize: (1, 1)),
-            WSConv2D(inputChannels: 3, outputChannels: 512, kernelSize: (1, 1)),
-            WSConv2D(inputChannels: 3, outputChannels: 1024, kernelSize: (1, 1)), // lv1
-        ]
-        
-        downsample = AvgPool2D.init(poolSize: (2, 2), strides: (2, 2))
-    }
+    
+    public init() {}
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         let level = GlobalState.level
-        let startLayer = Config.maxLevel - level
-        
-        var x1 = fromRGB[startLayer](input)
-        x1 = downsample(blocks[startLayer](x1))
         
         guard level > 1 else {
-            x1 = lastBlock(x1)
-            return x1
+            // alpha = 1
+            return lastBlock(fromRGB2(input))
         }
         
-        var x2 = downsample(input)
-        x2 = fromRGB[startLayer+1](x2)
+        let x1 = fromRGB1(downsample(input))
+        var x2 = fromRGB2(input)
+    
+        let lastIndex = level-2
+        x2 = blocks[lastIndex](x2)
+        x2 = downsample(x2)
         
         var x = lerp(x1, x2, rate: GlobalState.alpha)
         
-        for l in startLayer+1..<Config.maxLevel {
+        for l in (0..<lastIndex).reversed() {
             x = blocks[l](x)
             x = downsample(x)
         }
         
         return lastBlock(x)
+    }
+    
+    static let ioChannels = [
+        (512, 1024),
+        (512, 512),
+        (256, 512),
+        (256, 256),
+        (128, 256),
+        (128, 128),
+    ]
+    
+    public mutating func grow() {
+        let blockCount = blocks.count
+        let io = Discriminator.ioChannels[blockCount]
+        
+        blocks.append(DiscriminatorBlock(inputChannels: io.0,outputChannels: io.1))
+        
+        fromRGB1 = fromRGB2
+        fromRGB2 = WSConv2D(inputChannels: 3, outputChannels: io.0, kernelSize: (1, 1))
     }
 }

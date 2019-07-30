@@ -15,6 +15,7 @@ class ImageLoader {
     init(imageDirectory: String) throws {
         self.imageDirectory = imageDirectory
         fileNames = try FileManager.default.contentsOfDirectory(atPath: imageDirectory)
+            .filter { $0.hasSuffix(".png") }
     }
     
     func shuffle() {

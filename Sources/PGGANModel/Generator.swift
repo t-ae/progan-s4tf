@@ -53,36 +53,17 @@ public struct GeneratorBlock: Layer {
 }
 
 public struct Generator: Layer {
-    public var firstBlock: GeneratorFirstBlock
+    public var firstBlock = GeneratorFirstBlock()
 
-    public var blocks: [GeneratorBlock]
-    public var toRGB: [WSConv2D]
+    public var blocks: [GeneratorBlock] = []
 
-    public var upsample: UpSampling2D<Float>
+    public var upsample = UpSampling2D<Float>(size: 2)
+    
+    public var toRGB1 = WSConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1), activation: tanh)
+    public var toRGB2 = WSConv2D(inputChannels: 1024, outputChannels: 3, kernelSize: (1, 1), activation: tanh)
 
-    public init() {
-        firstBlock = GeneratorFirstBlock()
-        upsample = UpSampling2D(size: 2)
-
-        blocks = [
-            GeneratorBlock(inputChannels: 1024, outputChannels: 512), // 8x8
-            GeneratorBlock(inputChannels: 512, outputChannels: 512), // 16x16
-            GeneratorBlock(inputChannels: 512, outputChannels: 256), // 32x32
-            GeneratorBlock(inputChannels: 256, outputChannels: 256), // 64x64
-            GeneratorBlock(inputChannels: 256, outputChannels: 128), // 128x128
-            GeneratorBlock(inputChannels: 128, outputChannels: 128), // 256x256
-        ]
-
-        toRGB = [
-            WSConv2D(inputChannels: 512, outputChannels: 3, kernelSize: (1, 1), activation: tanh),
-            WSConv2D(inputChannels: 512, outputChannels: 3, kernelSize: (1, 1), activation: tanh),
-            WSConv2D(inputChannels: 256, outputChannels: 3, kernelSize: (1, 1), activation: tanh),
-            WSConv2D(inputChannels: 256, outputChannels: 3, kernelSize: (1, 1), activation: tanh),
-            WSConv2D(inputChannels: 128, outputChannels: 3, kernelSize: (1, 1), activation: tanh),
-            WSConv2D(inputChannels: 128, outputChannels: 3, kernelSize: (1, 1), activation: tanh),
-        ]
-    }
-
+    public init() {}
+    
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = firstBlock(input)
@@ -90,22 +71,40 @@ public struct Generator: Layer {
 
         guard level > 1 else {
             // 常にalpha = 1
-            return toRGB[0](blocks[0](upsample(x)))
+            return toRGB2(x)
         }
 
-        for lv in 0..<level-1 {
+        for lv in 0..<level-2 {
             x = upsample(x)
             x = blocks[lv](x)
         }
         
         var x1 = x
-        x1 = toRGB[level-2](x1)
+        x1 = toRGB1(x1)
         x1 = upsample(x1)
 
         var x2 = upsample(x)
-        x2 = blocks[level-1](x2)
-        x2 = toRGB[level-1](x2)
+        x2 = blocks[level-2](x2)
+        x2 = toRGB2(x2)
 
         return lerp(x1, x2, rate: GlobalState.alpha)
+    }
+    
+    static let ioChannels = [
+        (1024, 512),
+        (512, 512),
+        (512, 256),
+        (256, 256),
+        (256, 128),
+        (128, 128)
+    ]
+    
+    public mutating func grow() {
+        let blockCount = blocks.count
+        let io = Generator.ioChannels[blockCount]
+        
+        blocks.append(GeneratorBlock(inputChannels: io.0, outputChannels: io.1))
+        toRGB1 = toRGB2
+        toRGB2 = WSConv2D(inputChannels: io.1, outputChannels: 3, kernelSize: (1, 1), activation: tanh)
     }
 }

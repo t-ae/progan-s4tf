@@ -9,6 +9,15 @@ var discriminator = Discriminator()
 var optG = Adam(for: generator, learningRate: 1e-3, beta1: 0)
 var optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0)
 
+func grow() {
+    GlobalState.level += 1
+    generator.grow()
+    discriminator.grow()
+    
+    optG = Adam(for: generator, learningRate: 1e-3, beta1: 0)
+    optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0)
+}
+
 func train(minibatch: Tensor<Float>) {
     let start = Date()
     defer { debugPrint("train: \(Date().timeIntervalSince(start))sec") }
@@ -43,6 +52,7 @@ func infer(imageName: String) {
     Context.local.learningPhase = .inference
     
     var images = generator(testNoise)
+    images = images.padded(forSizes: [(0, 0), (1, 1), (1, 1), (0, 0)], with: 0)
     let (height, width) = (images.shape[1], images.shape[2])
     images = images.reshaped(to: [8, 8, height, width, 3])
     images = images.transposed(withPermutations: [0, 2, 1, 3, 4])
@@ -64,13 +74,13 @@ var phase: Phase = .stabilizing
 var imageCount = 0
 
 for step in 1... {
-    print("step:", step)
     if phase == .fading {
         GlobalState.alpha = Float(imageCount) / Float(Config.numImagesPerPhase)
     }
+    print("step: \(step), alpha: \(GlobalState.alpha)")
     
-    let minibatchSize = Config.minibatchSizeSchedule[GlobalState.level]
-    let imageSize = 4 * Int(powf(2, Float(GlobalState.level)))
+    let minibatchSize = Config.minibatchSizeSchedule[GlobalState.level - 1]
+    let imageSize = 2 * Int(powf(2, Float(GlobalState.level)))
 
     let minibatch = imageLoader.minibatch(size: minibatchSize, imageSize: (imageSize, imageSize))
     train(minibatch: minibatch)
@@ -90,7 +100,7 @@ for step in 1... {
         case (.stabilizing, _):
             phase = .fading
             GlobalState.alpha = 0
-            GlobalState.level += 1
+            grow()
             print("Start fading lv: \(GlobalState.level)")
         }
     }
