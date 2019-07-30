@@ -34,7 +34,7 @@ struct DiscriminatorLastBlock: Layer {
                          outputChannels: 1024,
                          kernelSize: (3, 3),
                          activation: lrelu)
-        conv2 = WSConv2D(inputChannels: 1024,
+        conv2 = WSConv2D(inputChannels: 1025,
                          outputChannels: 1,
                          kernelSize: (4, 4),
                          padding: .valid,
@@ -46,6 +46,7 @@ struct DiscriminatorLastBlock: Layer {
         let batchSize = input.shape[0]
         var x = input
         x = conv1(x)
+        x = minibatchStdConcat(x)
         x = conv2(x)
         x = x.reshaped(to: [batchSize, 1])
         return x

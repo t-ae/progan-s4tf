@@ -19,6 +19,26 @@ public func lerp(_ a: Tensor<Float>, _ b: Tensor<Float>, rate: Float) -> Tensor<
     return a + rate * (b - a)
 }
 
+@differentiable
+public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
+    let groupSize = 4
+    let batchSize = x.shape[0]
+    let height = x.shape[1]
+    let width = x.shape[2]
+    let M = batchSize / groupSize
+    
+    // Compute stddev of each pixel in group
+    var y = x.reshaped(to: [groupSize, M, -1])
+    let mean = y.mean(alongAxes: 0) // [1, M, -1]
+    y = (y - mean).squared().mean(squeezingAxes: 0) // [M, -1]
+    y = sqrt(y + 1e-8)
+    
+    y = y.mean(squeezingAxes: 1) // [M]
+    y = y.reshaped(to: [M, 1, 1, 1])
+    y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
+    return x.concatenated(with: y, alongAxis: 3)
+}
+
 public struct WSConv2D: Layer {
     
     public var filter: Tensor<Float>
