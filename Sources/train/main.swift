@@ -1,7 +1,7 @@
 import Foundation
 import Python
 import TensorFlow
-import PGGANModel
+import ProGANModel
 
 var generator = Generator()
 var discriminator = Discriminator()

@@ -1,5 +1,5 @@
 import Foundation
-import PGGANModel
+import ProGANModel
 
 func debugPrint(_ text: String) {
     guard Config.debugPrint else {

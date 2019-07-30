@@ -1,9 +1,9 @@
 import TensorFlow
 import XCTest
 import class Foundation.Bundle
-import PGGANModel
+import ProGANModel
 
-final class PGGANTests: XCTestCase {
+final class ProGANTests: XCTestCase {
     func testGeneratorSize() {
         let gen = Generator()
         
