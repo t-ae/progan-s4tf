@@ -7,3 +7,11 @@ func debugPrint(_ text: String) {
     }
     print(text)
 }
+
+func measureTime(label: String, f: ()->Void) {
+    let start = Date()
+    
+    f()
+    
+    debugPrint("\(label): \(Date().timeIntervalSince(start))sec")
+}

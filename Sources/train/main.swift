@@ -19,9 +19,6 @@ func grow() {
 }
 
 func train(minibatch: Tensor<Float>) {
-    let start = Date()
-    defer { debugPrint("train: \(Date().timeIntervalSince(start))sec") }
-    
     Context.local.learningPhase = .training
     let minibatchSize = minibatch.shape[0]
     // Update generator
@@ -83,7 +80,9 @@ for step in 1... {
     let imageSize = 2 * Int(powf(2, Float(GlobalState.level)))
 
     let minibatch = imageLoader.minibatch(size: minibatchSize, imageSize: (imageSize, imageSize))
-    train(minibatch: minibatch)
+    measureTime(label: "train") {
+        train(minibatch: minibatch)
+    }
     
     imageCount += minibatchSize
     
