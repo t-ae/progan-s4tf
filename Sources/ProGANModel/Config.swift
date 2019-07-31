@@ -8,10 +8,10 @@ public enum Config {
     // minibatch size for each level
     public static let minibatchSizeSchedule = [128, 64, 64, 32, 32, 16, 16]
     
-    public static let numImagesPerPhase = 80_000
+    public static let numImagesPerPhase = 800_000
     
     public static let imageDirectory = "./images"
-    public static let imageOutputDirectory = "./output"
+    public static let tensorboardOutputDirectory = "./tensorboard"
     
     public static let numStepsToInfer = 10_000
     

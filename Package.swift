@@ -7,6 +7,7 @@ let package = Package(
     name: "ProGAN",
     dependencies: [
         .package(url: "https://github.com/t-ae/swim.git", from: "3.3.1"),
+        .package(url: "https://github.com/t-ae/tensorboardx-s4tf.git", from: "0.0.2"),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -14,7 +15,7 @@ let package = Package(
         .target(
             name: "ProGANModel",
             dependencies: []),
-        .target(name: "train", dependencies: ["ProGANModel", "Swim"]),
+        .target(name: "train", dependencies: ["ProGANModel", "Swim", "TensorBoardX"]),
         .testTarget(
             name: "ProGANModelTests",
             dependencies: ["ProGANModel"]),

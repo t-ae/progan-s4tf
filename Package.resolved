@@ -9,6 +9,15 @@
           "revision": "903fb3238e13d5e3591ba67833087e336cd0bd6f",
           "version": "3.3.1"
         }
+      },
+      {
+        "package": "TensorBoardX",
+        "repositoryURL": "https://github.com/t-ae/tensorboardx-s4tf.git",
+        "state": {
+          "branch": null,
+          "revision": "83dfcc742444866a9180f2b2517b21ed3c67c34d",
+          "version": "0.0.2"
+        }
       }
     ]
   },

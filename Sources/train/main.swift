@@ -1,6 +1,7 @@
 import Foundation
 import Python
 import TensorFlow
+import TensorBoardX
 import ProGANModel
 
 var generator = Generator()
@@ -17,12 +18,15 @@ func grow() {
     optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0)
 }
 
-func train(minibatch: Tensor<Float>) {
+let imageLoader = try ImageLoader(imageDirectory: Config.imageDirectory)
+
+func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Float>){
     Context.local.learningPhase = .training
     let minibatchSize = minibatch.shape[0]
     // Update generator
     let noise1 = sampleNoise(size: minibatchSize)
-    let 𝛁generator = generator.gradient { generator ->Tensor<Float> in
+    
+    let (lossG, 𝛁generator) = generator.valueWithGradient { generator ->Tensor<Float> in
         let images = generator(noise1)
         let logits = discriminator(images)
         return generatorLoss(fakeLogits: logits)
@@ -32,18 +36,22 @@ func train(minibatch: Tensor<Float>) {
     // Update discriminator
     let noise2 = sampleNoise(size: minibatchSize)
     let fakeImages = generator(noise2)
-    let 𝛁discriminator = discriminator.gradient { discriminator -> Tensor<Float> in
+    let (lossD, 𝛁discriminator) = discriminator.valueWithGradient { discriminator -> Tensor<Float> in
         let realLogits = discriminator(minibatch)
         let fakeLogits = discriminator(fakeImages)
         return discriminatorLoss(realLogits: realLogits, fakeLogits: fakeLogits)
     }
     optD.update(&discriminator.allDifferentiableVariables, along: 𝛁discriminator)
+    
+    return (lossG, lossD)
 }
+
+// Plot
+let writer = SummaryWriter(logdir: Config.tensorboardOutputDirectory, flushSecs: 10)
 
 // Test
 let testNoise = sampleNoise(size: 64)
-let plot = Plot(outputFolder: Config.imageOutputDirectory)
-func infer(imageName: String) {
+func infer(level: Int, step: Int) {
     print("infer...")
     Context.local.learningPhase = .inference
     
@@ -57,10 +65,8 @@ func infer(imageName: String) {
     // [0, 1] range
     images = (images + 1) / 2
     
-    plot.plotImage(images.clipped(min: Tensor(0), max: Tensor(1)), name: imageName)
+    writer.addImage(tag: "lv\(level)", image: images, globalStep: step)
 }
-
-let imageLoader = try ImageLoader(imageDirectory: Config.imageDirectory)
 
 enum Phase {
     case fading, stabilizing
@@ -84,9 +90,12 @@ for step in 1... {
         imageLoader.minibatch(size: minibatchSize, imageSize: (imageSize, imageSize))
     }
     
-    measureTime(label: "train") {
+    let (lossG, lossD) = measureTime(label: "train") {
         train(minibatch: minibatch)
     }
+    
+    writer.addScalar(tag: "lv\(level)/lossG", scalar: lossG.scalar!, globalStep: step)
+    writer.addScalar(tag: "lv\(level)/lossD", scalar: lossD.scalar!, globalStep: step)
     
     imageCount += minibatchSize
     
@@ -109,7 +118,6 @@ for step in 1... {
     }
     
     if step.isMultiple(of: Config.numStepsToInfer) {
-        let imageName = String(format: "%09d.png", step)
-        infer(imageName: imageName)
+        infer(level: level, step: step)
     }
 }
