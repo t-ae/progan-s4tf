@@ -61,13 +61,15 @@ public struct Generator: Layer {
     
     public var toRGB1 = WSConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1), activation: tanh)
     public var toRGB2 = WSConv2D(inputChannels: 1024, outputChannels: 3, kernelSize: (1, 1), activation: tanh)
+    
+    @noDerivative
+    public private(set) var level = 1
 
     public init() {}
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = firstBlock(input)
-        let level = GlobalState.level
 
         guard level > 1 else {
             // 常にalpha = 1
@@ -100,6 +102,11 @@ public struct Generator: Layer {
     ]
     
     public mutating func grow() {
+        level += 1
+        guard level <= Config.maxLevel else {
+            fatalError("Generator.level exceeds Config.maxLevel")
+        }
+        
         let blockCount = blocks.count
         let io = Generator.ioChannels[blockCount]
         

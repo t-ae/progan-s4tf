@@ -64,13 +64,13 @@ public struct Discriminator: Layer {
     
     var downsample = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
         
+    @noDerivative
+    public private(set) var level = 1
     
     public init() {}
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        let level = GlobalState.level
-        
         guard level > 1 else {
             // alpha = 1
             return lastBlock(fromRGB2(input))
@@ -103,6 +103,11 @@ public struct Discriminator: Layer {
     ]
     
     public mutating func grow() {
+        level += 1
+        guard level <= Config.maxLevel else {
+            fatalError("Generator.level exceeds Config.maxLevel")
+        }
+        
         let blockCount = blocks.count
         let io = Discriminator.ioChannels[blockCount]
         

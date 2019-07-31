@@ -10,7 +10,6 @@ var optG = Adam(for: generator, learningRate: 1e-3, beta1: 0)
 var optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0)
 
 func grow() {
-    GlobalState.level += 1
     generator.grow()
     discriminator.grow()
     
@@ -76,8 +75,10 @@ for step in 1... {
     }
     print("step: \(step), alpha: \(GlobalState.alpha)")
     
-    let minibatchSize = Config.minibatchSizeSchedule[GlobalState.level - 1]
-    let imageSize = 2 * Int(powf(2, Float(GlobalState.level)))
+    let level = generator.level
+    
+    let minibatchSize = Config.minibatchSizeSchedule[level - 1]
+    let imageSize = 2 * Int(powf(2, Float(level)))
 
     let minibatch = imageLoader.minibatch(size: minibatchSize, imageSize: (imageSize, imageSize))
     measureTime(label: "train") {
@@ -89,18 +90,18 @@ for step in 1... {
     if imageCount >= Config.numImagesPerPhase {
         imageCount = 0
         
-        switch (phase, GlobalState.level) {
+        switch (phase, level) {
         case (.fading, _):
             phase = .stabilizing
             GlobalState.alpha = 1
-            print("Start stabilizing lv: \(GlobalState.level)")
+            print("Start stabilizing lv: \(level)")
         case (.stabilizing, Config.maxLevel):
             break
         case (.stabilizing, _):
             phase = .fading
             GlobalState.alpha = 0
             grow()
-            print("Start fading lv: \(GlobalState.level)")
+            print("Start fading lv: \(level)")
         }
     }
     
