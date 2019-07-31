@@ -2,7 +2,7 @@ import TensorFlow
 import XCTest
 import ProGANModel
 
-final class ProGANTests: XCTestCase {
+final class ProGANModelTests: XCTestCase {
     func testGeneratorSize() {
         var gen = Generator()
         
@@ -79,7 +79,7 @@ final class ProGANTests: XCTestCase {
             dis.grow()
         }
         
-        var opt = Adam(for: gen)
+        let opt = Adam(for: gen)
         let noise = sampleNoise(size: 8)
         
         let dgen = gen.gradient { gen -> Tensor<Float> in
@@ -99,7 +99,7 @@ final class ProGANTests: XCTestCase {
             dis.grow()
         }
         
-        var opt = Adam(for: dis)
+        let opt = Adam(for: dis)
         let noise = sampleNoise(size: 8)
         let fakeImages = gen(noise)
         let realImages = Tensor<Float>(zeros: fakeImages.shape)

@@ -1,7 +1,7 @@
 import XCTest
 
-import PGGANTests
+import ProGANModelTests
 
 var tests = [XCTestCaseEntry]()
-tests += PGGANTests.allTests()
+tests += ProGANModelTests.allTests()
 XCTMain(tests)
