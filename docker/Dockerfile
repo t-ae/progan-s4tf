@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxml2 \
         libblocksruntime-dev
 
-RUN pip3 install numpy matplotlib
+RUN pip3 install numpy matplotlib tensorboardX Pillow
 
 # Configure cuda
 RUN echo "/usr/local/cuda-9.2/targets/x86_64-linux/lib/stubs" > /etc/ld.so.conf.d/cuda-9.2-stubs.conf && \
