@@ -27,9 +27,6 @@ class ImageLoader {
     }
     
     func minibatch(size: Int, imageSize: (height: Int, width: Int)) -> Tensor<Float> {
-        let start = Date()
-        defer { debugPrint("minibatch load: \(Date().timeIntervalSince(start))sec") }
-        
         if fileNames.count >= index+size {
             resetIndex()
             shuffle()

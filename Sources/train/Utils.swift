@@ -8,10 +8,9 @@ func debugPrint(_ text: String) {
     print(text)
 }
 
-func measureTime(label: String, f: ()->Void) {
+func measureTime<R>(label: String, f: ()->R) -> R {
     let start = Date()
+    defer { debugPrint("\(label): \(Date().timeIntervalSince(start))sec") }
     
-    f()
-    
-    debugPrint("\(label): \(Date().timeIntervalSince(start))sec")
+    return f()
 }

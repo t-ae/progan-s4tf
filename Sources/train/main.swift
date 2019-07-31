@@ -80,7 +80,10 @@ for step in 1... {
     let minibatchSize = Config.minibatchSizeSchedule[level - 1]
     let imageSize = 2 * Int(powf(2, Float(level)))
 
-    let minibatch = imageLoader.minibatch(size: minibatchSize, imageSize: (imageSize, imageSize))
+    let minibatch = measureTime(label: "minibatch load") {
+        imageLoader.minibatch(size: minibatchSize, imageSize: (imageSize, imageSize))
+    }
+    
     measureTime(label: "train") {
         train(minibatch: minibatch)
     }
