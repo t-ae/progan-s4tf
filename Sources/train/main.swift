@@ -29,7 +29,7 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     let (lossG, 𝛁generator) = generator.valueWithGradient { generator ->Tensor<Float> in
         let images = generator(noise1)
         let logits = discriminator(images)
-        return generatorLoss(fakeLogits: logits)
+        return Config.loss.generatorLoss(fake: logits)
     }
     optG.update(&generator.allDifferentiableVariables, along: 𝛁generator)
     
@@ -39,7 +39,7 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     let (lossD, 𝛁discriminator) = discriminator.valueWithGradient { discriminator -> Tensor<Float> in
         let realLogits = discriminator(minibatch)
         let fakeLogits = discriminator(fakeImages)
-        return discriminatorLoss(realLogits: realLogits, fakeLogits: fakeLogits)
+        return Config.loss.discriminatorLoss(real: realLogits, fake: fakeLogits)
     }
     optD.update(&discriminator.allDifferentiableVariables, along: 𝛁discriminator)
     
@@ -64,6 +64,7 @@ func infer(level: Int, step: Int) {
     
     // [0, 1] range
     images = (images + 1) / 2
+    images = images.clipped(min: Tensor(0), max: Tensor(1))
     
     writer.addImage(tag: "lv\(level)", image: images, globalStep: step)
 }

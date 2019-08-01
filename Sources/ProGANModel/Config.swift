@@ -5,6 +5,8 @@ public enum Config {
     // Level 7 generates 256x256 images.
     public static let maxLevel = 7
     
+    public static let loss = LSGANLoss()
+    
     // minibatch size for each level
     public static let minibatchSizeSchedule = [128, 64, 64, 32, 32, 16, 16]
     

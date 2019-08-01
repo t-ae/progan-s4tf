@@ -60,7 +60,7 @@ public struct Generator: Layer {
     public var upsample = UpSampling2D<Float>(size: 2)
     
     public var toRGB1 = WSConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1), activation: tanh)
-    public var toRGB2 = WSConv2D(inputChannels: 1024, outputChannels: 3, kernelSize: (1, 1), activation: tanh)
+    public var toRGB2 = WSConv2D(inputChannels: 1024, outputChannels: 3, kernelSize: (1, 1), activation: identity)
     
     @noDerivative
     public private(set) var level = 1
@@ -112,6 +112,6 @@ public struct Generator: Layer {
         
         blocks.append(GeneratorBlock(inputChannels: io.0, outputChannels: io.1))
         toRGB1 = toRGB2
-        toRGB2 = WSConv2D(inputChannels: io.1, outputChannels: 3, kernelSize: (1, 1), activation: tanh)
+        toRGB2 = WSConv2D(inputChannels: io.1, outputChannels: 3, kernelSize: (1, 1), activation: identity)
     }
 }

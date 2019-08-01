@@ -1,22 +1,44 @@
 import Foundation
 import TensorFlow
 
-@differentiable
-public func generatorLoss(fakeLogits: Tensor<Float>) -> Tensor<Float> {
-//    sigmoidCrossEntropy(logits: fakeLogits,
-//                        labels: Tensor(ones: fakeLogits.shape))
-    return softplus(-fakeLogits).mean()
+public protocol Loss {
+    @differentiable
+    func generatorLoss(fake: Tensor<Float>) -> Tensor<Float>
+    
+    @differentiable
+    func discriminatorLoss(real: Tensor<Float>, fake: Tensor<Float>) -> Tensor<Float>
 }
 
-@differentiable
-public func discriminatorLoss(realLogits: Tensor<Float>, fakeLogits: Tensor<Float>) -> Tensor<Float> {
-//    let realLoss = sigmoidCrossEntropy(logits: realLogits,
-//                                       labels: Tensor(ones: realLogits.shape))
-//    let fakeLoss = sigmoidCrossEntropy(logits: fakeLogits,
-//                                       labels: Tensor(zeros: fakeLogits.shape))
+public struct NonSaturatingLoss: Loss {
+    public init() {}
     
-    let realLoss = softplus(-realLogits).mean()
-    let fakeLoss = softplus(fakeLogits).mean()
+    @differentiable
+    public func generatorLoss(fake: Tensor<Float>) -> Tensor<Float> {
+        softplus(-fake).mean()
+    }
     
-    return realLoss + fakeLoss
+    @differentiable
+    public func discriminatorLoss(real: Tensor<Float>, fake: Tensor<Float>) -> Tensor<Float> {
+        let realLoss = softplus(-real).mean()
+        let fakeLoss = softplus(fake).mean()
+        
+        return realLoss + fakeLoss
+    }
+}
+
+public struct LSGANLoss: Loss {
+    public init() {}
+    
+    @differentiable
+    public func generatorLoss(fake: Tensor<Float>) -> Tensor<Float> {
+        meanSquaredError(predicted: fake, expected: Tensor<Float>(ones: fake.shape)) / 2
+    }
+    
+    @differentiable
+    public func discriminatorLoss(real: Tensor<Float>, fake: Tensor<Float>) -> Tensor<Float> {
+        let realLoss = meanSquaredError(predicted: real, expected: Tensor<Float>(ones: real.shape))
+        let fakeLoss = meanSquaredError(predicted: fake, expected: Tensor<Float>(zeros: fake.shape))
+        
+        return (realLoss + fakeLoss) / 2
+    }
 }
