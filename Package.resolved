@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/t-ae/swim.git",
         "state": {
           "branch": null,
-          "revision": "903fb3238e13d5e3591ba67833087e336cd0bd6f",
-          "version": "3.3.1"
+          "revision": "eb02e321e0c65237bb29dbd5991905069f69e3d5",
+          "version": "3.3.2"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/t-ae/tensorboardx-s4tf.git",
         "state": {
           "branch": null,
-          "revision": "83dfcc742444866a9180f2b2517b21ed3c67c34d",
-          "version": "0.0.2"
+          "revision": "ac27a0a8de454d802d66f412c75b0f746ef30700",
+          "version": "0.0.3"
         }
       }
     ]

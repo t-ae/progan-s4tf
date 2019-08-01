@@ -8,14 +8,15 @@ class ImageLoader {
     
     var index = 0
     
-    var multiThread = true
+    var multiThread: Bool
     
     let appendQueue = DispatchQueue(label: "ImageLoader.appendQueue")
     
-    init(imageDirectory: String) throws {
+    init(imageDirectory: String, multiThread: Bool = true) throws {
         self.imageDirectory = imageDirectory
         fileNames = try FileManager.default.contentsOfDirectory(atPath: imageDirectory)
             .filter { $0.hasSuffix(".png") }
+        self.multiThread = multiThread
     }
     
     func shuffle() {
@@ -44,9 +45,7 @@ class ImageLoader {
                 let image = try! Image<RGB, Float>(contentsOf: url)
                 let resized = image.resize(width: imageSize.width, height: imageSize.height)
                 
-                let tensor = resized.withUnsafeBufferPointer { bp in
-                    Tensor<Float>(Array(bp))
-                }
+                let tensor = Tensor<Float>(resized.getData())
                 appendQueue.sync {
                     tensors.append(tensor)
                 }
