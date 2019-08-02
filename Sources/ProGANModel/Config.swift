@@ -10,7 +10,7 @@ public enum Config {
     
     public static let useFusedScale = true
     
-    public static let loss = LSGANLoss()
+    public static let loss = NonSaturatingLoss()
     
     // MARK: Training settings
     public static let generatorLearningRate: Float = 1e-3
@@ -19,12 +19,12 @@ public enum Config {
     // minibatch size for each level
     public static let minibatchSizeSchedule = [128, 64, 64, 32, 32, 16, 16]
     
-    public static let numImagesPerPhase = 100 //800_000
+    public static let numImagesPerPhase = 800_000
     
     public static let imageDirectory = URL(fileURLWithPath: "./images")
     public static let tensorboardOutputDirectory = URL(fileURLWithPath: "./tensorboard")
     
-    public static let numStepsToInfer = 10_000
+    public static let numStepsToInfer = 3_000
     
     public static let debugPrint = true
 }
