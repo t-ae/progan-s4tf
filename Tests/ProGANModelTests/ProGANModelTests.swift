@@ -85,7 +85,7 @@ final class ProGANModelTests: XCTestCase {
         let dgen = gen.gradient { gen -> Tensor<Float> in
             let images = gen(noise)
             let logits = dis(images)
-            return generatorLoss(fakeLogits: logits)
+            return Config.loss.generatorLoss(fake: logits)
         }
         opt.update(&gen.allDifferentiableVariables, along: dgen)
     }
@@ -107,7 +107,7 @@ final class ProGANModelTests: XCTestCase {
         let ddis = dis.gradient { dis -> Tensor<Float> in
             let realLogits = dis(realImages)
             let fakeLogits = dis(fakeImages)
-            return discriminatorLoss(realLogits: realLogits, fakeLogits: fakeLogits)
+            return Config.loss.discriminatorLoss(real: realLogits, fake: fakeLogits)
         }
         opt.update(&dis.allDifferentiableVariables, along: ddis)
     }
