@@ -3,7 +3,7 @@ import TensorFlow
 import Swim
 
 class ImageLoader {
-    var imageDirectory: String
+    var imageDirectory: URL
     var fileNames: [String]
     
     var index = 0
@@ -12,9 +12,9 @@ class ImageLoader {
     
     let appendQueue = DispatchQueue(label: "ImageLoader.appendQueue")
     
-    init(imageDirectory: String, multiThread: Bool = true) throws {
+    init(imageDirectory: URL, multiThread: Bool = true) throws {
         self.imageDirectory = imageDirectory
-        fileNames = try FileManager.default.contentsOfDirectory(atPath: imageDirectory)
+        fileNames = try FileManager.default.contentsOfDirectory(atPath: imageDirectory.path)
             .filter { $0.hasSuffix(".png") }
         self.multiThread = multiThread
     }
@@ -33,15 +33,13 @@ class ImageLoader {
             shuffle()
         }
         
-        let imageDir = URL(fileURLWithPath: imageDirectory)
-        
         var tensors: [Tensor<Float>]
         let fileNames = self.fileNames[index..<index+size]
         
         if multiThread {
             tensors = []
             DispatchQueue.concurrentPerform(iterations: size) { i in
-                let url = imageDir.appendingPathComponent(fileNames[i])
+                let url = imageDirectory.appendingPathComponent(fileNames[i])
                 let image = try! Image<RGB, Float>(contentsOf: url)
                 let resized = image.resize(width: imageSize.width, height: imageSize.height)
                 
@@ -52,7 +50,7 @@ class ImageLoader {
             }
         } else {
             let images = fileNames.map { fileName -> Image<RGB, Float> in
-                let url = imageDir.appendingPathComponent(fileName)
+                let url = imageDirectory.appendingPathComponent(fileName)
                 let image = try! Image<RGB, Float>(contentsOf: url)
                 return image.resize(width: imageSize.width, height: imageSize.height)
             }

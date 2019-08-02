@@ -1,3 +1,5 @@
+import Foundation
+
 public enum Config {
     public static let latentSize = 512
     
@@ -12,8 +14,8 @@ public enum Config {
     
     public static let numImagesPerPhase = 800_000
     
-    public static let imageDirectory = "./images"
-    public static let tensorboardOutputDirectory = "./tensorboard"
+    public static let imageDirectory = URL(fileURLWithPath: "./images")
+    public static let tensorboardOutputDirectory = URL(fileURLWithPath: "./tensorboard")
     
     public static let numStepsToInfer = 10_000
     
