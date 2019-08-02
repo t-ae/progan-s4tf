@@ -107,8 +107,8 @@ public struct EqualizedTransposedConv2D: Layer {
                 gain: Float = sqrt(2)) {
         let filter = Tensor<Float>(randomNormal: [kernelSize.0,
                                                   kernelSize.1,
-                                                  inputChannels,
-                                                  outputChannels])
+                                                  outputChannels,
+                                                  inputChannels])
         let bias = Tensor<Float>(zeros: [outputChannels])
         
         self.conv = TransposedConv2D(filter: filter,

@@ -7,7 +7,7 @@ public enum Config {
     // Level 7 generates 256x256 images.
     public static let maxLevel = 7
     
-    // Can't use fused scale currently since TransposedConv2D doesn't work.
+    // Can't use fused scale currently since TransposedConv2D doesn't work correctly.
     // https://github.com/tensorflow/swift-apis/pull/288
     public static let useFusedScale = false
     
@@ -16,7 +16,7 @@ public enum Config {
     // minibatch size for each level
     public static let minibatchSizeSchedule = [128, 64, 64, 32, 32, 16, 16]
     
-    public static let numImagesPerPhase = 800_000
+    public static let numImagesPerPhase = 100 //800_000
     
     public static let imageDirectory = URL(fileURLWithPath: "./images")
     public static let tensorboardOutputDirectory = URL(fileURLWithPath: "./tensorboard")
