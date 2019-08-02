@@ -7,9 +7,7 @@ public enum Config {
     // Level 7 generates 256x256 images.
     public static let maxLevel = 7
     
-    // Can't use fused scale currently since TransposedConv2D doesn't work correctly.
-    // https://github.com/tensorflow/swift-apis/pull/288
-    public static let useFusedScale = false
+    public static let useFusedScale = true
     
     public static let loss = LSGANLoss()
     
