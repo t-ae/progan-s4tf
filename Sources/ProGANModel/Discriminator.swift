@@ -26,23 +26,21 @@ struct DiscriminatorBlock: Layer {
 }
 
 struct DiscriminatorLastBlock: Layer {
-    var conv1: EqualizedConv2D
-    var conv2: EqualizedConv2D
-    var conv3: EqualizedConv2D
+    var conv: EqualizedConv2D
+    var dense1: EqualizedDense
+    var dense2: EqualizedDense
     
     public init() {
-        conv1 = EqualizedConv2D(inputChannels: 1024,
-                                outputChannels: 1024,
-                                kernelSize: (4, 4),
-                                padding: .valid,
+        conv = EqualizedConv2D(inputChannels: 1024,
+                               outputChannels: 1024,
+                               kernelSize: (4, 4),
+                               padding: .valid,
+                               activation: lrelu)
+        dense1 = EqualizedDense(inputSize: 1024,
+                                outputSize: 512,
                                 activation: lrelu)
-        conv2 = EqualizedConv2D(inputChannels: 1024,
-                                outputChannels: 512,
-                                kernelSize: (1, 1),
-                                activation: lrelu)
-        conv3 = EqualizedConv2D(inputChannels: 512,
-                                outputChannels: 1,
-                                kernelSize: (1, 1),
+        dense2 = EqualizedDense(inputSize: 512,
+                                outputSize: 1,
                                 activation: identity)
     }
     
@@ -52,10 +50,10 @@ struct DiscriminatorLastBlock: Layer {
         var x = input
         // FIXME: Temporary disabled due to crash in Ubuntu/CUDA
         //x = minibatchStdConcat(x)
-        x = conv1(x)
-        x = conv2(x)
-        x = conv3(x)
-        x = x.reshaped(to: [batchSize, 1])
+        x = conv(x)
+        x = x.reshaped(to: [batchSize, -1])
+        x = dense1(x)
+        x = dense2(x)
         return x
     }
 }

@@ -2,28 +2,26 @@ import Foundation
 import TensorFlow
 
 public struct GeneratorFirstBlock: Layer {
-    var conv1: EqualizedConv2D
-    var conv2: EqualizedConv2D
+    var dense: EqualizedDense
+    var conv: EqualizedConv2D
     
     public init() {
-        conv1 = EqualizedConv2D(inputChannels: Config.latentSize,
-                                outputChannels: 1024*4*4,
-                                kernelSize: (1, 1),
-                                activation: lrelu)
-        conv2 = EqualizedConv2D(inputChannels: 1024,
-                                outputChannels: 1024,
-                                kernelSize: (3, 3),
-                                activation: lrelu)
+        dense = EqualizedDense(inputSize: Config.latentSize,
+                               outputSize: 1024*4*4,
+                               activation: lrelu)
+        conv = EqualizedConv2D(inputChannels: 1024,
+                               outputChannels: 1024,
+                               kernelSize: (3, 3),
+                               activation: lrelu)
     }
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         let batchSize = input.shape[0]
-        var x = input.reshaped(to: [batchSize, 1, 1, Config.latentSize])
-        x = conv1(x) // [batchSize, 1, 1, 1024*4*4]
+        var x = dense(input)
         x = x.reshaped(to: [batchSize, 4, 4, 1024])
         x = pixelNormalization(x)
-        x = pixelNormalization(conv2(x)) // [batchSize, 1024, 4, 4]
+        x = pixelNormalization(conv(x)) // [batchSize, 1024, 4, 4]
         return x
     }
 }
