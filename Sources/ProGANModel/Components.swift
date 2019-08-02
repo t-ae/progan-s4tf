@@ -40,44 +40,67 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
 }
 
 public struct EqualizedConv2D: Layer {
-    
-    public var filter: Tensor<Float>
-    public var bias: Tensor<Float>
-    
+    public var conv: Conv2D<Float>
     @noDerivative public let scale: Tensor<Float>
     
-    @noDerivative public let strides: (Int, Int)
-    @noDerivative public let padding: Padding
-    
-    @noDerivative public let activation: Activation
-    
-    public typealias Activation = @differentiable (Tensor<Float>) -> Tensor<Float>
-
     public init(inputChannels: Int,
                 outputChannels: Int,
                 kernelSize: (Int, Int),
                 strides: (Int, Int) = (1, 1),
                 padding: Padding = .same,
-                activation: @escaping Activation = identity,
+                activation: @escaping Conv2D<Float>.Activation = identity,
                 gain: Float = sqrt(2)) {
-        self.filter = Tensor(randomNormal: [kernelSize.0,
-                                            kernelSize.1,
-                                            inputChannels,
-                                            outputChannels])
-        self.bias = Tensor(zeros: [outputChannels])
-        self.strides = strides
-        self.padding = padding
-        self.activation = activation
+        let filter = Tensor<Float>(randomNormal: [kernelSize.0,
+                                                  kernelSize.1,
+                                                  inputChannels,
+                                                  outputChannels])
+        let bias = Tensor<Float>(zeros: [outputChannels])
+        
+        self.conv = Conv2D(filter: filter,
+                           bias: bias,
+                           activation: activation,
+                           strides: strides,
+                           padding: padding)
         
         self.scale = Tensor(gain) / sqrt(Float(inputChannels*kernelSize.0*kernelSize.1))
     }
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        return activation(conv2D(input,
-                                 filter: scale * filter,
-                                 strides: (1, strides.0, strides.1, 1),
-                                 padding: padding) + bias)
+        // Scale input instead of conv.filter
+        return conv(input * scale)
     }
 }
 
+public struct EqualizedTransposedConv2D: Layer {
+    public var conv: TransposedConv2D<Float>
+    @noDerivative public let scale: Tensor<Float>
+    
+    public init(inputChannels: Int,
+                outputChannels: Int,
+                kernelSize: (Int, Int),
+                strides: (Int, Int) = (1, 1),
+                padding: Padding = .same,
+                activation: @escaping TransposedConv2D<Float>.Activation = identity,
+                gain: Float = sqrt(2)) {
+        let filter = Tensor<Float>(randomNormal: [kernelSize.0,
+                                                  kernelSize.1,
+                                                  inputChannels,
+                                                  outputChannels])
+        let bias = Tensor<Float>(zeros: [outputChannels])
+        
+        self.conv = TransposedConv2D(filter: filter,
+                                     bias: bias,
+                                     activation: activation,
+                                     strides: strides,
+                                     padding: padding)
+        
+        self.scale = Tensor(gain) / sqrt(Float(inputChannels*kernelSize.0*kernelSize.1))
+    }
+    
+    @differentiable
+    public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+        // Scale input instead of conv.filter
+        return conv(input * scale)
+    }
+}
