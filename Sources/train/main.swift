@@ -14,8 +14,8 @@ func grow() {
     generator.grow()
     discriminator.grow()
     
-    optG = Adam(for: generator, learningRate: 1e-3, beta1: 0)
-    optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0)
+    optG = Adam(for: generator, learningRate: Config.generatorLearningRate, beta1: 0)
+    optD = Adam(for: discriminator, learningRate: Config.discriminatorLearningRate, beta1: 0)
 }
 
 let imageLoader = try ImageLoader(imageDirectory: Config.imageDirectory)

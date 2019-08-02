@@ -1,6 +1,7 @@
 import Foundation
 
 public enum Config {
+    // MARK: Model settings
     public static let latentSize = 512
     
     // Level 1 generates 4x4 images.
@@ -10,6 +11,10 @@ public enum Config {
     public static let useFusedScale = true
     
     public static let loss = LSGANLoss()
+    
+    // MARK: Training settings
+    public static let generatorLearningRate: Float = 1e-3
+    public static let discriminatorLearningRate: Float = 1e-3
     
     // minibatch size for each level
     public static let minibatchSizeSchedule = [128, 64, 64, 32, 32, 16, 16]
