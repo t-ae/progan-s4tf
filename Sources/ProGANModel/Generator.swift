@@ -7,10 +7,10 @@ public struct GeneratorFirstBlock: Layer {
     
     public init() {
         dense = EqualizedDense(inputSize: Config.latentSize,
-                               outputSize: 1024*4*4,
+                               outputSize: 256*4*4,
                                activation: lrelu)
-        conv = EqualizedConv2D(inputChannels: 1024,
-                               outputChannels: 1024,
+        conv = EqualizedConv2D(inputChannels: 256,
+                               outputChannels: 256,
                                kernelSize: (3, 3),
                                activation: lrelu)
     }
@@ -19,9 +19,9 @@ public struct GeneratorFirstBlock: Layer {
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         let batchSize = input.shape[0]
         var x = dense(input)
-        x = x.reshaped(to: [batchSize, 4, 4, 1024])
+        x = x.reshaped(to: [batchSize, 4, 4, 256])
         x = pixelNormalization(x)
-        x = pixelNormalization(conv(x)) // [batchSize, 1024, 4, 4]
+        x = pixelNormalization(conv(x)) // [batchSize, 256, 4, 4]
         return x
     }
 }
@@ -66,7 +66,7 @@ public struct Generator: Layer {
     public var upsample = UpSampling2D<Float>(size: 2)
     
     public var toRGB1 = EqualizedConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1), activation: tanh)
-    public var toRGB2 = EqualizedConv2D(inputChannels: 1024, outputChannels: 3, kernelSize: (1, 1), activation: identity)
+    public var toRGB2 = EqualizedConv2D(inputChannels: 256, outputChannels: 3, kernelSize: (1, 1), activation: identity)
     
     @noDerivative
     public private(set) var level = 1
@@ -96,12 +96,12 @@ public struct Generator: Layer {
     }
     
     static let ioChannels = [
-        (1024, 512),
-        (512, 512),
-        (512, 256),
+        (256, 256),
         (256, 256),
         (256, 128),
-        (128, 128)
+        (128, 64),
+        (64, 32),
+        (32, 16)
     ]
     
     public mutating func grow() {

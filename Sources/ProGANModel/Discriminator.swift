@@ -39,15 +39,15 @@ struct DiscriminatorLastBlock: Layer {
     var dense2: EqualizedDense
     
     public init() {
-        conv = EqualizedConv2D(inputChannels: 1024,
-                               outputChannels: 1024,
+        conv = EqualizedConv2D(inputChannels: 256,
+                               outputChannels: 256,
                                kernelSize: (4, 4),
                                padding: .valid,
                                activation: lrelu)
-        dense1 = EqualizedDense(inputSize: 1024,
-                                outputSize: 512,
+        dense1 = EqualizedDense(inputSize: 256,
+                                outputSize: 128,
                                 activation: lrelu)
-        dense2 = EqualizedDense(inputSize: 512,
+        dense2 = EqualizedDense(inputSize: 128,
                                 outputSize: 1,
                                 activation: identity)
     }
@@ -73,7 +73,7 @@ public struct Discriminator: Layer {
     var blocks: [DiscriminatorBlock] = []
     
     var fromRGB1 = EqualizedConv2D(inputChannels: 3, outputChannels: 1, kernelSize: (1, 1))
-    var fromRGB2 = EqualizedConv2D(inputChannels: 3, outputChannels: 1024, kernelSize: (1, 1))
+    var fromRGB2 = EqualizedConv2D(inputChannels: 3, outputChannels: 256, kernelSize: (1, 1))
     
     var downsample = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
     
@@ -105,12 +105,12 @@ public struct Discriminator: Layer {
     }
     
     static let ioChannels = [
-        (512, 1024),
-        (512, 512),
-        (256, 512),
+        (256, 256),
         (256, 256),
         (128, 256),
-        (128, 128),
+        (64, 128),
+        (32, 64),
+        (16, 32),
     ]
     
     public mutating func grow() {

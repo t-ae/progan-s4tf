@@ -2,7 +2,7 @@ import Foundation
 
 public enum Config {
     // MARK: Model settings
-    public static let latentSize = 512
+    public static let latentSize = 256
     
     // Level 1 generates 4x4 images.
     // Level 7 generates 256x256 images.
