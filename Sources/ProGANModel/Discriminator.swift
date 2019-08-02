@@ -5,6 +5,8 @@ struct DiscriminatorBlock: Layer {
     var conv1: EqualizedConv2D
     var conv2: EqualizedConv2D
     
+    var avgPool = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
+    
     init(inputChannels: Int, outputChannels: Int) {
         conv1 = EqualizedConv2D(inputChannels: inputChannels,
                                 outputChannels: outputChannels,
@@ -21,6 +23,7 @@ struct DiscriminatorBlock: Layer {
         var x = input
         x = conv1(x)
         x = conv2(x)
+        x = avgPool(x)
         return x
     }
 }
@@ -86,13 +89,11 @@ public struct Discriminator: Layer {
         
         let lastIndex = level-2
         x2 = blocks[lastIndex](x2)
-        x2 = downsample(x2)
         
         var x = lerp(x1, x2, rate: GlobalState.alpha)
         
         for l in (0..<lastIndex).reversed() {
             x = blocks[l](x)
-            x = downsample(x)
         }
         
         return lastBlock(x)

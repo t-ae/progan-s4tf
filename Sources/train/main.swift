@@ -107,14 +107,14 @@ for step in 1... {
         case (.fading, _):
             phase = .stabilizing
             GlobalState.alpha = 1
-            print("Start stabilizing lv: \(level)")
+            print("Start stabilizing lv: \(generator.level)")
         case (.stabilizing, Config.maxLevel):
             break
         case (.stabilizing, _):
             phase = .fading
             GlobalState.alpha = 0
             grow()
-            print("Start fading lv: \(level)")
+            print("Start fading lv: \(generator.level)")
         }
     }
     

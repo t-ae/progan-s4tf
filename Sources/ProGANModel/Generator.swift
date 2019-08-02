@@ -30,6 +30,8 @@ public struct GeneratorBlock: Layer {
     var conv1: EqualizedConv2D
     var conv2: EqualizedConv2D
     
+    var upsample = UpSampling2D<Float>(size: 2)
+    
     public init(inputChannels: Int, outputChannels: Int) {
         conv1 = EqualizedConv2D(inputChannels: inputChannels,
                                 outputChannels: outputChannels,
@@ -44,7 +46,8 @@ public struct GeneratorBlock: Layer {
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
-        x = pixelNormalization(conv1(input))
+        x = upsample(x)
+        x = pixelNormalization(conv1(x))
         x = pixelNormalization(conv2(x))
         return x
     }
@@ -75,7 +78,6 @@ public struct Generator: Layer {
         }
         
         for lv in 0..<level-2 {
-            x = upsample(x)
             x = blocks[lv](x)
         }
         
@@ -83,10 +85,8 @@ public struct Generator: Layer {
         x1 = toRGB1(x1)
         x1 = upsample(x1)
         
-        var x2 = upsample(x)
-        x2 = blocks[level-2](x2)
+        var x2 = blocks[level-2](x)
         x2 = toRGB2(x2)
-        
         return lerp(x1, x2, rate: GlobalState.alpha)
     }
     
