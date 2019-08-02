@@ -39,6 +39,28 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     return x.concatenated(with: y, alongAxis: 3)
 }
 
+public struct EqualizedDense: Layer {
+    public var dense: Dense<Float>
+    @noDerivative public let scale: Tensor<Float>
+    
+    public init(inputSize: Int,
+                outputSize: Int,
+                activation: @escaping Dense<Float>.Activation = identity,
+                gain: Float = sqrt(2)) {
+        let weight = Tensor<Float>(randomNormal: [inputSize, outputSize])
+        let bias = Tensor<Float>(zeros: [outputSize])
+        self.dense = Dense(weight: weight, bias: bias, activation: activation)
+        
+        self.scale = Tensor(gain) / sqrt(Float(inputSize))
+    }
+    
+    @differentiable
+    public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+        // Scale input instead of conv.filter
+        return dense(input * scale)
+    }
+}
+
 public struct EqualizedConv2D: Layer {
     public var conv: Conv2D<Float>
     @noDerivative public let scale: Tensor<Float>
