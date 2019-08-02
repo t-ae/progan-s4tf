@@ -39,7 +39,7 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     return x.concatenated(with: y, alongAxis: 3)
 }
 
-public struct WSConv2D: Layer {
+public struct EqualizedConv2D: Layer {
     
     public var filter: Tensor<Float>
     public var bias: Tensor<Float>
@@ -80,3 +80,4 @@ public struct WSConv2D: Layer {
                                  padding: padding) + bias)
     }
 }
+

@@ -2,18 +2,18 @@ import Foundation
 import TensorFlow
 
 struct DiscriminatorBlock: Layer {
-    var conv1: WSConv2D
-    var conv2: WSConv2D
+    var conv1: EqualizedConv2D
+    var conv2: EqualizedConv2D
     
     init(inputChannels: Int, outputChannels: Int) {
-        conv1 = WSConv2D(inputChannels: inputChannels,
-                         outputChannels: outputChannels,
-                         kernelSize: (3, 3),
-                         activation: lrelu)
-        conv2 = WSConv2D(inputChannels: outputChannels,
-                         outputChannels: outputChannels,
-                         kernelSize: (3, 3),
-                         activation: lrelu)
+        conv1 = EqualizedConv2D(inputChannels: inputChannels,
+                                outputChannels: outputChannels,
+                                kernelSize: (3, 3),
+                                activation: lrelu)
+        conv2 = EqualizedConv2D(inputChannels: outputChannels,
+                                outputChannels: outputChannels,
+                                kernelSize: (3, 3),
+                                activation: lrelu)
     }
     
     @differentiable
@@ -26,24 +26,24 @@ struct DiscriminatorBlock: Layer {
 }
 
 struct DiscriminatorLastBlock: Layer {
-    var conv1: WSConv2D
-    var conv2: WSConv2D
-    var conv3: WSConv2D
+    var conv1: EqualizedConv2D
+    var conv2: EqualizedConv2D
+    var conv3: EqualizedConv2D
     
     public init() {
-        conv1 = WSConv2D(inputChannels: 1024,
-                         outputChannels: 1024,
-                         kernelSize: (4, 4),
-                         padding: .valid,
-                         activation: lrelu)
-        conv2 = WSConv2D(inputChannels: 1024,
-                         outputChannels: 512,
-                         kernelSize: (1, 1),
-                         activation: lrelu)
-        conv3 = WSConv2D(inputChannels: 512,
-                         outputChannels: 1,
-                         kernelSize: (1, 1),
-                         activation: identity)
+        conv1 = EqualizedConv2D(inputChannels: 1024,
+                                outputChannels: 1024,
+                                kernelSize: (4, 4),
+                                padding: .valid,
+                                activation: lrelu)
+        conv2 = EqualizedConv2D(inputChannels: 1024,
+                                outputChannels: 512,
+                                kernelSize: (1, 1),
+                                activation: lrelu)
+        conv3 = EqualizedConv2D(inputChannels: 512,
+                                outputChannels: 1,
+                                kernelSize: (1, 1),
+                                activation: identity)
     }
     
     @differentiable
@@ -66,11 +66,11 @@ public struct Discriminator: Layer {
     
     var blocks: [DiscriminatorBlock] = []
     
-    var fromRGB1 = WSConv2D(inputChannels: 3, outputChannels: 1, kernelSize: (1, 1))
-    var fromRGB2 = WSConv2D(inputChannels: 3, outputChannels: 1024, kernelSize: (1, 1))
+    var fromRGB1 = EqualizedConv2D(inputChannels: 3, outputChannels: 1, kernelSize: (1, 1))
+    var fromRGB2 = EqualizedConv2D(inputChannels: 3, outputChannels: 1024, kernelSize: (1, 1))
     
     var downsample = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
-        
+    
     @noDerivative
     public private(set) var level = 1
     
@@ -85,7 +85,7 @@ public struct Discriminator: Layer {
         
         let x1 = fromRGB1(downsample(input))
         var x2 = fromRGB2(input)
-    
+        
         let lastIndex = level-2
         x2 = blocks[lastIndex](x2)
         x2 = downsample(x2)
@@ -121,6 +121,6 @@ public struct Discriminator: Layer {
         blocks.append(DiscriminatorBlock(inputChannels: io.0,outputChannels: io.1))
         
         fromRGB1 = fromRGB2
-        fromRGB2 = WSConv2D(inputChannels: 3, outputChannels: io.0, kernelSize: (1, 1))
+        fromRGB2 = EqualizedConv2D(inputChannels: 3, outputChannels: io.0, kernelSize: (1, 1))
     }
 }
