@@ -71,6 +71,6 @@ public struct WSConv2D: Layer {
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        return conv2D(input, filter: scale * filter, padding: padding) + bias
+        return activation(conv2D(input, filter: scale * filter, padding: padding) + bias)
     }
 }
