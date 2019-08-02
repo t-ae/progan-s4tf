@@ -27,16 +27,19 @@ public struct GeneratorFirstBlock: Layer {
 }
 
 public struct GeneratorBlock: Layer {
-    var conv1: EqualizedConv2D
+    var conv1: EqualizedTransposedConv2D
     var conv2: EqualizedConv2D
     
     var upsample = UpSampling2D<Float>(size: 2)
     
     public init(inputChannels: Int, outputChannels: Int) {
-        conv1 = EqualizedConv2D(inputChannels: inputChannels,
-                                outputChannels: outputChannels,
-                                kernelSize: (3, 3),
-                                activation: lrelu)
+        let stride = Config.useFusedScale ? 2 : 1
+        
+        conv1 = EqualizedTransposedConv2D(inputChannels: inputChannels,
+                                          outputChannels: outputChannels,
+                                          kernelSize: (3, 3),
+                                          strides: (stride, stride),
+                                          activation: lrelu)
         conv2 = EqualizedConv2D(inputChannels: outputChannels,
                                 outputChannels: outputChannels,
                                 kernelSize: (3, 3),
@@ -46,7 +49,9 @@ public struct GeneratorBlock: Layer {
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
-        x = upsample(x)
+        if !Config.useFusedScale {
+            x = upsample(x)
+        }
         x = pixelNormalization(conv1(x))
         x = pixelNormalization(conv2(x))
         return x

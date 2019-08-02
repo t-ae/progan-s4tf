@@ -8,6 +8,8 @@ struct DiscriminatorBlock: Layer {
     var avgPool = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
     
     init(inputChannels: Int, outputChannels: Int) {
+        let stride = Config.useFusedScale ? 2 : 1
+        
         conv1 = EqualizedConv2D(inputChannels: inputChannels,
                                 outputChannels: outputChannels,
                                 kernelSize: (3, 3),
@@ -15,6 +17,7 @@ struct DiscriminatorBlock: Layer {
         conv2 = EqualizedConv2D(inputChannels: outputChannels,
                                 outputChannels: outputChannels,
                                 kernelSize: (3, 3),
+                                strides: (stride, stride),
                                 activation: lrelu)
     }
     
@@ -23,7 +26,9 @@ struct DiscriminatorBlock: Layer {
         var x = input
         x = conv1(x)
         x = conv2(x)
-        x = avgPool(x)
+        if !Config.useFusedScale {
+            x = avgPool(x)
+        }
         return x
     }
 }
