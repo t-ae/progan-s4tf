@@ -46,6 +46,7 @@ public struct WSConv2D: Layer {
     
     @noDerivative public let scale: Tensor<Float>
     
+    @noDerivative public let strides: (Int, Int)
     @noDerivative public let padding: Padding
     
     @noDerivative public let activation: Activation
@@ -55,6 +56,7 @@ public struct WSConv2D: Layer {
     public init(inputChannels: Int,
                 outputChannels: Int,
                 kernelSize: (Int, Int),
+                strides: (Int, Int) = (1, 1),
                 padding: Padding = .same,
                 activation: @escaping Activation = identity,
                 gain: Float = sqrt(2)) {
@@ -63,6 +65,7 @@ public struct WSConv2D: Layer {
                                             inputChannels,
                                             outputChannels])
         self.bias = Tensor(zeros: [outputChannels])
+        self.strides = strides
         self.padding = padding
         self.activation = activation
         
@@ -71,6 +74,9 @@ public struct WSConv2D: Layer {
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        return activation(conv2D(input, filter: scale * filter, padding: padding) + bias)
+        return activation(conv2D(input,
+                                 filter: scale * filter,
+                                 strides: (1, strides.0, strides.1, 1),
+                                 padding: padding) + bias)
     }
 }
