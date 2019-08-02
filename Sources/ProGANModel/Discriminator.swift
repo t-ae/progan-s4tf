@@ -13,7 +13,7 @@ struct DiscriminatorBlock: Layer {
         conv2 = WSConv2D(inputChannels: outputChannels,
                          outputChannels: outputChannels,
                          kernelSize: (3, 3),
-                         activation: identity)
+                         activation: lrelu)
     }
     
     @differentiable
@@ -28,26 +28,33 @@ struct DiscriminatorBlock: Layer {
 struct DiscriminatorLastBlock: Layer {
     var conv1: WSConv2D
     var conv2: WSConv2D
+    var conv3: WSConv2D
     
     public init() {
         conv1 = WSConv2D(inputChannels: 1024,
                          outputChannels: 1024,
-                         kernelSize: (3, 3),
-                         activation: lrelu)
-        conv2 = WSConv2D(inputChannels: 1025,
-                         outputChannels: 1,
                          kernelSize: (4, 4),
                          padding: .valid,
                          activation: lrelu)
+        conv2 = WSConv2D(inputChannels: 1024,
+                         outputChannels: 512,
+                         kernelSize: (1, 1),
+                         activation: lrelu)
+        conv3 = WSConv2D(inputChannels: 512,
+                         outputChannels: 1,
+                         kernelSize: (1, 1),
+                         activation: identity)
     }
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         let batchSize = input.shape[0]
         var x = input
+        // FIXME: Temporary disabled due to crash in Ubuntu/CUDA
+        //x = minibatchStdConcat(x)
         x = conv1(x)
-        x = minibatchStdConcat(x)
         x = conv2(x)
+        x = conv3(x)
         x = x.reshaped(to: [batchSize, 1])
         return x
     }
