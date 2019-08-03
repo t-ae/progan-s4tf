@@ -45,7 +45,8 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     // return Tensor(concatenating: [x, y], alongAxis: 3)
     
     // Dirty hack to avoid the bugs above
-    let xs = x.split(count: x.shape[3], alongAxis: 3)
+    let xs = x.unstacked(alongAxis: 3)
+    y = y.squeezingShape(at: 3)
     let concat = Tensor(stacking: xs + [y], alongAxis: 3)
     return concat.reshaped(to: [batchSize, height, width, -1])
 }
