@@ -39,10 +39,15 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     y = y.reshaped(to: [batchSize, height, width, 1])
     
     // https://bugs.swift.org/browse/TF-705
-    return x.concatenated(with: y, alongAxis: 3)
+    //return x.concatenated(with: y, alongAxis: 3)
     
     // https://bugs.swift.org/browse/TF-706
     // return Tensor(concatenating: [x, y], alongAxis: 3)
+    
+    // Dirty hack to avoid the bugs above
+    let xs = x.split(count: x.shape[3], alongAxis: 3)
+    let concat = Tensor(stacking: xs + [y], alongAxis: 3)
+    return concat.reshaped(to: [batchSize, height, width, -1])
 }
 
 public struct EqualizedDense: Layer {
