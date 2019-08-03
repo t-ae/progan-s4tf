@@ -34,9 +34,10 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     y = sqrt(y + 1e-8)
     
     y = y.mean(squeezingAxes: 1) // [M]
-    y = y.reshaped(to: [M, 1, 1, 1])
-    y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
-    return x.concatenated(with: y, alongAxis: 3)
+    y = y.reshaped(to: [1, M, 1, 1, 1])
+    y = y.tiled(multiples: Tensor([Int32(groupSize), 1, Int32(height), Int32(width), 1]))
+    y = y.reshaped(to: [batchSize, height, width, 1])
+    return Tensor(concatenating: [x, y], alongAxis: 3)
 }
 
 public struct EqualizedDense: Layer {
