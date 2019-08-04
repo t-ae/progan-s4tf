@@ -67,7 +67,7 @@ public struct EqualizedDense: Layer {
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        // Scale input instead of conv.filter
+        // Scale input instead of dense.weight
         return dense(input * scale)
     }
 }

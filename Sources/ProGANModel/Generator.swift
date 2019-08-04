@@ -65,8 +65,8 @@ public struct Generator: Layer {
     
     public var upsample = UpSampling2D<Float>(size: 2)
     
-    public var toRGB1 = EqualizedConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1), activation: tanh)
-    public var toRGB2 = EqualizedConv2D(inputChannels: 256, outputChannels: 3, kernelSize: (1, 1), activation: identity)
+    public var toRGB1 = EqualizedConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1), activation: identity, gain: 1) // dummy at first
+    public var toRGB2 = EqualizedConv2D(inputChannels: 256, outputChannels: 3, kernelSize: (1, 1), activation: identity, gain: 1)
     
     @noDerivative
     public private(set) var level = 1
@@ -115,6 +115,6 @@ public struct Generator: Layer {
         
         blocks.append(GeneratorBlock(inputChannels: io.0, outputChannels: io.1))
         toRGB1 = toRGB2
-        toRGB2 = EqualizedConv2D(inputChannels: io.1, outputChannels: 3, kernelSize: (1, 1), activation: identity)
+        toRGB2 = EqualizedConv2D(inputChannels: io.1, outputChannels: 3, kernelSize: (1, 1), activation: identity, gain: 1)
     }
 }
