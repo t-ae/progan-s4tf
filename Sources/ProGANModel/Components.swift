@@ -25,17 +25,17 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     let batchSize = x.shape[0]
     let height = x.shape[1]
     let width = x.shape[2]
+    let channels = x.shape[3]
     let M = batchSize / groupSize
     
     // Compute stddev of each pixel in group
-    var y = x.reshaped(to: [groupSize, M, -1])
-    let mean = y.mean(alongAxes: 0) // [1, M, -1]
-    y = (y - mean).squared().mean(squeezingAxes: 0) // [M, -1]
+    var y = x.reshaped(to: [groupSize, M, height, width, channels])
+    let mean = y.mean(alongAxes: 0) // [1, M, height, width, channels]
+    y = (y - mean).squared().mean(squeezingAxes: 0) // [M, height, width, channels]
     y = sqrt(y + 1e-8)
     
-    y = y.mean(squeezingAxes: 1) // [M]
-    y = y.reshaped(to: [1, M, 1, 1, 1])
-    y = y.tiled(multiples: Tensor([Int32(groupSize), 1, Int32(height), Int32(width), 1]))
+    y = y.mean(alongAxes: 1, 2, 3) // [M, 1, 1, 1]
+    y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
     y = y.reshaped(to: [batchSize, height, width, 1])
     
     // https://bugs.swift.org/browse/TF-705
@@ -47,8 +47,7 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     // Dirty hack to avoid the bugs above
     let xs = x.unstacked(alongAxis: 3)
     y = y.squeezingShape(at: 3)
-    let concat = Tensor(stacking: xs + [y], alongAxis: 3)
-    return concat.reshaped(to: [batchSize, height, width, -1])
+    return Tensor(stacking: xs + [y], alongAxis: 3)
 }
 
 public struct EqualizedDense: Layer {
