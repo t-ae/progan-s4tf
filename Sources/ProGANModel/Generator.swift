@@ -75,7 +75,11 @@ public struct Generator: Layer {
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        var x = firstBlock(input)
+        var x = input
+        if Config.normalizeLatent {
+            x = pixelNormalization(x)
+        }
+        x = firstBlock(x)
         
         guard level > 1 else {
             // 常にalpha = 1
