@@ -101,7 +101,7 @@ public struct Discriminator: Layer {
     public private(set) var level = 1
     
     @noDerivative
-    let runningMean: Parameter<Float> = Parameter(Tensor(0))
+    public let outputMean: Parameter<Float> = Parameter(Tensor(0))
     
     public init() {}
     
@@ -109,7 +109,7 @@ public struct Discriminator: Layer {
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         
         // Described in Appendix B
-        let noiseScale = 0.2 * pow(max(runningMean.value.scalar! - 0.5, 0), 2)
+        let noiseScale = 0.2 * pow(max(outputMean.value.scalar! - 0.5, 0), 2)
         
         guard level > 1 else {
             // alpha = 1
@@ -128,11 +128,7 @@ public struct Discriminator: Layer {
             x = blocks[l](DiscriminatorBlockInput(x: x, noiseScale: noiseScale))
         }
         
-        x = lastBlock(DiscriminatorBlockInput(x: x, noiseScale: noiseScale))
-        
-        runningMean.value = 0.9*runningMean.value + 0.1*x.mean()
-        
-        return x
+        return lastBlock(DiscriminatorBlockInput(x: x, noiseScale: noiseScale))
     }
     
     static let ioChannels = [

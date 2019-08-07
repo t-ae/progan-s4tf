@@ -28,8 +28,8 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     
     let (lossG, 𝛁generator) = generator.valueWithGradient { generator ->Tensor<Float> in
         let images = generator(noise1)
-        let logits = discriminator(images)
-        return Config.loss.generatorLoss(fake: logits)
+        let scores = discriminator(images)
+        return Config.loss.generatorLoss(fake: scores)
     }
     optG.update(&generator.allDifferentiableVariables, along: 𝛁generator)
     
@@ -37,9 +37,12 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     let noise2 = sampleNoise(size: minibatchSize)
     let fakeImages = generator(noise2)
     let (lossD, 𝛁discriminator) = discriminator.valueWithGradient { discriminator -> Tensor<Float> in
-        let realLogits = discriminator(minibatch)
-        let fakeLogits = discriminator(fakeImages)
-        return Config.loss.discriminatorLoss(real: realLogits, fake: fakeLogits)
+        let realScores = discriminator(minibatch)
+        // update output mean here
+        discriminator.outputMean.value = 0.9*discriminator.outputMean.value + 0.1*realScores.mean()
+        
+        let fakeScores = discriminator(fakeImages)
+        return Config.loss.discriminatorLoss(real: realScores, fake: fakeScores)
     }
     optD.update(&discriminator.allDifferentiableVariables, along: 𝛁discriminator)
     
@@ -97,6 +100,7 @@ for step in 1... {
     
     writer.addScalar(tag: "lv\(level)/lossG", scalar: lossG.scalar!, globalStep: step)
     writer.addScalar(tag: "lv\(level)/lossD", scalar: lossD.scalar!, globalStep: step)
+    writer.addScalar(tag: "lv\(level)/dout_mean", scalar: discriminator.outputMean.value.scalar!, globalStep: step)
     
     imageCount += minibatchSize
     
