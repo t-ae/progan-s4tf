@@ -1,6 +1,22 @@
 import Foundation
 import TensorFlow
 
+// Add per channel/batch noise
+// https://github.com/tkarras/progressive_growing_of_gans/blob/original-theano-version/network.py#L360-L400
+@differentiable
+func addNoise(_ x: Tensor<Float>, noiseScale: Float) -> Tensor<Float> {
+    let noiseShape: TensorShape = [x.shape[0], 1, 1, x.shape[3]]
+    let scale = noiseScale * sqrt(Float(x.shape[3]))
+    let noise = Tensor<Float>(randomNormal: noiseShape) * scale + 1
+    return x * noise
+}
+
+struct DiscriminatorBlockInput: Differentiable {
+    var x: Tensor<Float>
+    @noDerivative
+    var noiseScale: Float
+}
+
 struct DiscriminatorBlock: Layer {
     var conv1: EqualizedConv2D
     var conv2: EqualizedConv2D
@@ -22,9 +38,11 @@ struct DiscriminatorBlock: Layer {
     }
     
     @differentiable
-    func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        var x = input
+    func callAsFunction(_ input: DiscriminatorBlockInput) -> Tensor<Float> {
+        var x = input.x
+        x = addNoise(x, noiseScale: input.noiseScale)
         x = conv1(x)
+        x = addNoise(x, noiseScale: input.noiseScale)
         x = conv2(x)
         if !Config.useFusedScale {
             x = avgPool(x)
@@ -54,10 +72,12 @@ struct DiscriminatorLastBlock: Layer {
     }
     
     @differentiable
-    public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        let batchSize = input.shape[0]
-        var x = input
+    public func callAsFunction(_ input: DiscriminatorBlockInput) -> Tensor<Float> {
+        var x = input.x
+        let batchSize = x.shape[0]
+        
         x = minibatchStdConcat(x)
+        x = addNoise(x, noiseScale: input.noiseScale)
         x = conv(x)
         x = x.reshaped(to: [batchSize, -1])
         x = dense1(x)
@@ -80,28 +100,39 @@ public struct Discriminator: Layer {
     @noDerivative
     public private(set) var level = 1
     
+    @noDerivative
+    let runningMean: Parameter<Float> = Parameter(Tensor(0))
+    
     public init() {}
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+        
+        // Described in Appendix B
+        let noiseScale = 0.2 * pow(max(runningMean.value.scalar! - 0.5, 0), 2)
+        
         guard level > 1 else {
             // alpha = 1
-            return lastBlock(fromRGB2(input))
+            return lastBlock(DiscriminatorBlockInput(x: fromRGB2(input), noiseScale: noiseScale))
         }
         
         let x1 = fromRGB1(downsample(input))
         var x2 = fromRGB2(input)
         
         let lastIndex = level-2
-        x2 = blocks[lastIndex](x2)
+        x2 = blocks[lastIndex](DiscriminatorBlockInput(x: x2, noiseScale: noiseScale))
         
         var x = lerp(x1, x2, rate: GlobalState.alpha)
         
         for l in (0..<lastIndex).reversed() {
-            x = blocks[l](x)
+            x = blocks[l](DiscriminatorBlockInput(x: x, noiseScale: noiseScale))
         }
         
-        return lastBlock(x)
+        x = lastBlock(DiscriminatorBlockInput(x: x, noiseScale: noiseScale))
+        
+        runningMean.value = 0.9*runningMean.value + 0.1*x.mean()
+        
+        return x
     }
     
     static let ioChannels = [
