@@ -11,7 +11,7 @@ public enum Config {
     public static let useFusedScale = true
     public static let normalizeLatent = true
     
-    public static let loss = LSGANLoss()
+    public static let loss: LossType = .wgan
     
     // MARK: Training settings
     public static let generatorLearningRate: Float = 1e-3

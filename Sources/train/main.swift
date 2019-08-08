@@ -20,6 +20,8 @@ func grow() {
 
 let imageLoader = try ImageLoader(imageDirectory: Config.imageDirectory)
 
+let loss = Config.loss.createLoss()
+
 func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Float>){
     Context.local.learningPhase = .training
     let minibatchSize = minibatch.shape[0]
@@ -29,7 +31,7 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     let (lossG, 𝛁generator) = generator.valueWithGradient { generator ->Tensor<Float> in
         let images = generator(noise1)
         let scores = discriminator(images)
-        return Config.loss.generatorLoss(fake: scores)
+        return loss.generatorLoss(fake: scores)
     }
     optG.update(&generator.allDifferentiableVariables, along: 𝛁generator)
     
@@ -42,9 +44,16 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
         discriminator.outputMean.value = 0.9*discriminator.outputMean.value + 0.1*realScores.mean()
         
         let fakeScores = discriminator(fakeImages)
-        return Config.loss.discriminatorLoss(real: realScores, fake: fakeScores)
+        return loss.discriminatorLoss(real: realScores, fake: fakeScores)
     }
     optD.update(&discriminator.allDifferentiableVariables, along: 𝛁discriminator)
+    
+    if Config.loss == .wgan {
+        for k in discriminator.recursivelyAllWritableKeyPaths(to: Tensor<Float>.self) {
+            discriminator[keyPath: k] = discriminator[keyPath: k]
+                .clipped(min: Tensor(-0.01), max: Tensor(0.01))
+        }
+    }
     
     return (lossG, lossD)
 }

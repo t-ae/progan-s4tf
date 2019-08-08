@@ -109,7 +109,12 @@ public struct Discriminator: Layer {
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         
         // Described in Appendix B
-        let noiseScale = 0.2 * pow(max(outputMean.value.scalar! - 0.5, 0), 2)
+        let noiseScale: Float
+        if Config.loss == .lsgan {
+            noiseScale = 0.2 * pow(max(outputMean.value.scalar! - 0.5, 0), 2)
+        } else {
+            noiseScale = 0
+        }
         
         guard level > 1 else {
             // alpha = 1
