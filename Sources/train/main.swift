@@ -49,9 +49,18 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     optD.update(&discriminator.allDifferentiableVariables, along: 𝛁discriminator)
     
     if Config.loss == .wgan {
-        for k in discriminator.recursivelyAllWritableKeyPaths(to: Tensor<Float>.self) {
-            discriminator[keyPath: k] = discriminator[keyPath: k]
-                .clipped(min: Tensor(-0.01), max: Tensor(0.01))
+        // weight clipping
+        for k in discriminator.recursivelyAllWritableKeyPaths(to: EqualizedConv2D.self) {
+            let conv = discriminator[keyPath: k]
+            let clipValue = 0.01 / conv.scale
+            discriminator[keyPath: k].conv.filter = conv.conv.filter
+                .clipped(min: -clipValue, max: clipValue)
+        }
+        for k in discriminator.recursivelyAllWritableKeyPaths(to: EqualizedDense.self) {
+            let dense = discriminator[keyPath: k]
+            let clipValue = 0.01 / dense.scale
+            discriminator[keyPath: k].dense.weight = dense.dense.weight
+                .clipped(min: -clipValue, max: clipValue)
         }
     }
     
