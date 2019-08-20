@@ -33,20 +33,21 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
         let scores = discriminator(images)
         return loss.generatorLoss(fake: scores)
     }
-    optG.update(&generator.allDifferentiableVariables, along: 𝛁generator)
+    optG.update(&generator, along: 𝛁generator)
     
     // Update discriminator
     let noise2 = sampleNoise(size: minibatchSize)
     let fakeImages = generator(noise2)
     let (lossD, 𝛁discriminator) = discriminator.valueWithGradient { discriminator -> Tensor<Float> in
         let realScores = discriminator(minibatch)
-        // update output mean here
-        discriminator.outputMean.value = 0.9*discriminator.outputMean.value + 0.1*realScores.mean()
-        
         let fakeScores = discriminator(fakeImages)
+        
+        // update output mean here
+        discriminator.outputMean.value = 0.9*discriminator.outputMean.value + 0.1*fakeScores.mean()
+        
         return loss.discriminatorLoss(real: realScores, fake: fakeScores)
     }
-    optD.update(&discriminator.allDifferentiableVariables, along: 𝛁discriminator)
+    optD.update(&discriminator, along: 𝛁discriminator)
     
     if Config.loss == .wgan {
         // weight clipping

@@ -52,19 +52,24 @@ struct DiscriminatorBlock: Layer {
 }
 
 struct DiscriminatorLastBlock: Layer {
-    var conv: EqualizedConv2D
+    var conv1: EqualizedConv2D
+    var conv2: EqualizedConv2D
     var dense: EqualizedDense
     
     public init() {
-        conv = EqualizedConv2D(inputChannels: 257,
-                               outputChannels: 256,
-                               kernelSize: (4, 4),
-                               padding: .valid,
-                               activation: lrelu)
-        dense = EqualizedDense(inputSize: 256,
-                                outputSize: 1,
-                                activation: identity,
-                                gain: 1)
+        conv1 = EqualizedConv2D(inputChannels: 256,
+                                outputChannels: 256,
+                                kernelSize: (3, 3),
+                                activation: lrelu)
+        conv2 = EqualizedConv2D(inputChannels: 256,
+                                outputChannels: 256,
+                                kernelSize: (4, 4),
+                                padding: .valid,
+                                activation: lrelu)
+        dense = EqualizedDense(inputSize: 257,
+                               outputSize: 1,
+                               activation: identity,
+                               gain: 1)
     }
     
     @differentiable
@@ -72,9 +77,11 @@ struct DiscriminatorLastBlock: Layer {
         var x = input.x
         let batchSize = x.shape[0]
         
-        x = minibatchStdConcat(x)
         x = addNoise(x, noiseScale: input.noiseScale)
-        x = conv(x)
+        x = conv1(x)
+        x = addNoise(x, noiseScale: input.noiseScale)
+        x = conv2(x)
+        x = minibatchStdConcat(x)
         x = x.reshaped(to: [batchSize, -1])
         x = dense(x)
         return x
@@ -95,6 +102,7 @@ public struct Discriminator: Layer {
     @noDerivative
     public private(set) var level = 1
     
+    // Mean of output for fake images
     @noDerivative
     public let outputMean: Parameter<Float> = Parameter(Tensor(0))
     
