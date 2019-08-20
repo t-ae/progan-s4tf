@@ -49,7 +49,7 @@ public struct LSGANLoss: Loss {
     
     @differentiable
     public func generatorLoss(fake: Tensor<Float>) -> Tensor<Float> {
-        meanSquaredError(predicted: fake, expected: Tensor<Float>(zeros: fake.shape)) / 2
+        meanSquaredError(predicted: fake, expected: Tensor<Float>(zeros: fake.shape))
     }
     
     @differentiable

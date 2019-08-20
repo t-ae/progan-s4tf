@@ -35,6 +35,8 @@ class ImageLoader {
         
         var tensors: [Tensor<Float>]
         let fileNames = self.fileNames[index..<index+size]
+
+        index += size
         
         if multiThread {
             tensors = []
