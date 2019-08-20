@@ -57,7 +57,7 @@ struct DiscriminatorLastBlock: Layer {
     var dense: EqualizedDense
     
     public init() {
-        conv1 = EqualizedConv2D(inputChannels: 256,
+        conv1 = EqualizedConv2D(inputChannels: 257,
                                 outputChannels: 256,
                                 kernelSize: (3, 3),
                                 activation: lrelu)
@@ -66,7 +66,7 @@ struct DiscriminatorLastBlock: Layer {
                                 kernelSize: (4, 4),
                                 padding: .valid,
                                 activation: lrelu)
-        dense = EqualizedDense(inputSize: 257,
+        dense = EqualizedDense(inputSize: 256,
                                outputSize: 1,
                                activation: identity,
                                gain: 1)
@@ -77,11 +77,12 @@ struct DiscriminatorLastBlock: Layer {
         var x = input.x
         let batchSize = x.shape[0]
         
+        x = minibatchStdConcat(x)
         x = addNoise(x, noiseScale: input.noiseScale)
         x = conv1(x)
         x = addNoise(x, noiseScale: input.noiseScale)
         x = conv2(x)
-        x = minibatchStdConcat(x)
+        
         x = x.reshaped(to: [batchSize, -1])
         x = dense(x)
         return x

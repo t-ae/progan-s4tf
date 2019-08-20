@@ -31,7 +31,7 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     var y = x.reshaped(to: [groupSize, M, height, width, channels])
     let mean = y.mean(alongAxes: 0) // [1, M, height, width, channels]
     y = (y - mean).squared().mean(squeezingAxes: 0) // [M, height, width, channels]
-    // y = sqrt(y + 1e-8) // stddev
+    y = sqrt(y + 1e-8) // stddev
     
     y = y.mean(alongAxes: 1, 2, 3) // [M, 1, 1, 1]
     y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
