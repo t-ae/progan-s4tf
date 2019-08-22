@@ -54,7 +54,7 @@ class ImageLoader {
             let images = fileNames.map { fileName -> Image<RGB, Float> in
                 let url = imageDirectory.appendingPathComponent(fileName)
                 let image = try! Image<RGB, Float>(contentsOf: url)
-                return image.resize(width: imageSize.width, height: imageSize.height)
+                return image.resize(width: imageSize.width, height: imageSize.height, method: .areaAverage)
             }
             tensors = images.map { image in
                 image.withUnsafeBufferPointer { bp in
