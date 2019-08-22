@@ -168,7 +168,7 @@ public struct Discriminator: Layer {
         return [
             "disc/last_conv1": lastBlock.conv1.conv.filter,
             "disc/last_conv2": lastBlock.conv2.conv.filter,
-            "disc/last_dense": lastBlock.dense.dense.weight,
+            "disc/last_dense": lastBlock.dense.weight,
         ]
     }
 }

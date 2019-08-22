@@ -50,24 +50,30 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
 }
 
 public struct EqualizedDense: Layer {
-    public var dense: Dense<Float>
-    @noDerivative public let scale: Tensor<Float>
+    public typealias Activation = @differentiable (Tensor<Float>) -> Tensor<Float>
+    
+    public var weight: Tensor<Float>
+    public var bias: Tensor<Float>
+    
+    @noDerivative public let scale: Float
+    
+    @noDerivative public let activation: Activation
     
     public init(inputSize: Int,
                 outputSize: Int,
-                activation: @escaping Dense<Float>.Activation = identity,
+                activation: @escaping Activation = identity,
                 gain: Float = sqrt(2)) {
-        let weight = Tensor<Float>(randomNormal: [inputSize, outputSize])
-        let bias = Tensor<Float>(zeros: [outputSize])
-        self.dense = Dense(weight: weight, bias: bias, activation: activation)
+        self.weight = Tensor<Float>(randomNormal: [inputSize, outputSize])
+        self.bias = Tensor<Float>(zeros: [outputSize])
         
-        self.scale = Tensor(gain) / sqrt(Float(inputSize))
+        self.scale = gain / sqrt(Float(inputSize))
+        
+        self.activation = activation
     }
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        // Scale input instead of dense.weight
-        return dense(input * scale)
+        activation(matmul(input, weight * scale) + bias)
     }
 }
 

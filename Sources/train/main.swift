@@ -65,11 +65,11 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
         for k in discriminator.recursivelyAllWritableKeyPaths(to: EqualizedDense.self) {
             let dense = discriminator[keyPath: k]
             let clipValue = 0.01 / dense.scale
-            let absmax = abs(discriminator[keyPath: k].dense.weight).max()
+            let absmax = abs(discriminator[keyPath: k].weight).max()
             let scale = clipValue / absmax
             
             if scale < 1 {
-                discriminator[keyPath: k].dense.weight *= scale
+                discriminator[keyPath: k].weight *= scale
             }
         }
     }
