@@ -166,8 +166,8 @@ public struct Discriminator: Layer {
     
     public func getHistogramWeights() -> [String: Tensor<Float>] {
         return [
-            "disc/last_conv1": lastBlock.conv1.conv.filter,
-            "disc/last_conv2": lastBlock.conv2.conv.filter,
+            "disc/last_conv1": lastBlock.conv1.filter,
+            "disc/last_conv2": lastBlock.conv2.filter,
             "disc/last_dense": lastBlock.dense.weight,
         ]
     }

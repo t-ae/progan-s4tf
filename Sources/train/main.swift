@@ -55,11 +55,11 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
         for k in discriminator.recursivelyAllWritableKeyPaths(to: EqualizedConv2D.self) {
             let conv = discriminator[keyPath: k]
             let clipValue = 0.01 / conv.scale
-            let absmax = abs(discriminator[keyPath: k].conv.filter).max()
+            let absmax = abs(discriminator[keyPath: k].filter).max()
             let scale = clipValue / absmax
             
             if scale < 1 {
-                discriminator[keyPath: k].conv.filter *= scale
+                discriminator[keyPath: k].filter *= scale
             }
         }
         for k in discriminator.recursivelyAllWritableKeyPaths(to: EqualizedDense.self) {
