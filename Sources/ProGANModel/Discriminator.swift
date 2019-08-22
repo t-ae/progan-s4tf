@@ -163,4 +163,12 @@ public struct Discriminator: Layer {
         fromRGB1 = fromRGB2
         fromRGB2 = EqualizedConv2D(inputChannels: 3, outputChannels: io.0, kernelSize: (1, 1))
     }
+    
+    public func getHistogramWeights() -> [String: Tensor<Float>] {
+        return [
+            "disc/last_conv1": lastBlock.conv1.conv.filter,
+            "disc/last_conv2": lastBlock.conv2.conv.filter,
+            "disc/last_dense": lastBlock.dense.dense.weight,
+        ]
+    }
 }

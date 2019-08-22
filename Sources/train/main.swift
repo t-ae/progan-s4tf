@@ -154,5 +154,10 @@ for step in 1... {
     
     if step.isMultiple(of: Config.numStepsToInfer) {
         infer(level: level, step: step)
+        
+        // Histogram of discriminator
+        for (k, v) in discriminator.getHistogramWeights() {
+            writer.addHistogram(tag: k, values: v, globalStep: step)
+        }
     }
 }
