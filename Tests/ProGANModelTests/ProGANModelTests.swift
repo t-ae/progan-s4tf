@@ -82,12 +82,14 @@ final class ProGANModelTests: XCTestCase {
         let opt = Adam(for: gen)
         let noise = sampleNoise(size: 8)
         
+        let loss = Config.loss.createLoss()
+        
         let dgen = gen.gradient { gen -> Tensor<Float> in
             let images = gen(noise)
             let logits = dis(images)
-            return Config.loss.generatorLoss(fake: logits)
+            return loss.generatorLoss(fake: logits)
         }
-        opt.update(&gen.allDifferentiableVariables, along: dgen)
+        opt.update(&gen, along: dgen)
     }
     
     func testDiscriminatorTrainability() {
@@ -104,12 +106,14 @@ final class ProGANModelTests: XCTestCase {
         let fakeImages = gen(noise)
         let realImages = Tensor<Float>(zeros: fakeImages.shape)
         
+        let loss = Config.loss.createLoss()
+        
         let ddis = dis.gradient { dis -> Tensor<Float> in
             let realLogits = dis(realImages)
             let fakeLogits = dis(fakeImages)
-            return Config.loss.discriminatorLoss(real: realLogits, fake: fakeLogits)
+            return loss.discriminatorLoss(real: realLogits, fake: fakeLogits)
         }
-        opt.update(&dis.allDifferentiableVariables, along: ddis)
+        opt.update(&dis, along: ddis)
     }
     
     static let allTests = [
