@@ -127,8 +127,8 @@ public struct Generator: Layer {
         ]
         
         for i in 0..<blocks.count {
-            dict["gen/blocks[\(i)].conv1"] = blocks[i].conv1.filter
-            dict["gen/blocks[\(i)].conv2"] = blocks[i].conv2.filter
+            dict["gen/block\(i).conv1"] = blocks[i].conv1.filter
+            dict["gen/block\(i).conv2"] = blocks[i].conv2.filter
         }
         
         return dict

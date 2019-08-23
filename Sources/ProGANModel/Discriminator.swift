@@ -169,8 +169,8 @@ public struct Discriminator: Layer {
         ]
         
         for i in 0..<blocks.count {
-            dict["disc/blocks[\(i)].conv1"] = blocks[i].conv1.filter
-            dict["disc/blocks[\(i)].conv2"] = blocks[i].conv2.filter
+            dict["disc/block\(i).conv1"] = blocks[i].conv1.filter
+            dict["disc/block\(i).conv2"] = blocks[i].conv2.filter
         }
         
         return dict
