@@ -55,27 +55,18 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     optD.update(&discriminator, along: 𝛁discriminator)
     
     if Config.loss == .wgan {
-        // weight decay instead of clipping
-        // http://musyoku.github.io/2017/02/06/Wasserstein-GAN/
+        // weight clipping
         for k in discriminator.recursivelyAllWritableKeyPaths(to: EqualizedConv2D.self) {
             let conv = discriminator[keyPath: k]
-            let clipValue = 0.01 / conv.scale
-            let absmax = abs(discriminator[keyPath: k].filter).max()
-            let scale = clipValue / absmax
-            
-            if scale < 1 {
-                discriminator[keyPath: k].filter *= scale
-            }
+            let clipValue = Tensor(0.01 / conv.scale)
+            discriminator[keyPath: k].filter = conv.filter
+                .clipped(min: -clipValue, max: clipValue)
         }
         for k in discriminator.recursivelyAllWritableKeyPaths(to: EqualizedDense.self) {
             let dense = discriminator[keyPath: k]
-            let clipValue = 0.01 / dense.scale
-            let absmax = abs(discriminator[keyPath: k].weight).max()
-            let scale = clipValue / absmax
-            
-            if scale < 1 {
-                discriminator[keyPath: k].weight *= scale
-            }
+            let clipValue = Tensor(0.01 / dense.scale)
+            discriminator[keyPath: k].weight = dense.weight
+                .clipped(min: -clipValue, max: clipValue)
         }
     }
     
