@@ -36,6 +36,11 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
     let (lossG, 𝛁generator) = generator.valueWithGradient { generator ->Tensor<Float> in
         let images = generator(noise1)
         let scores = discriminator(images)
+        
+        // update output mean
+        discriminator.outputMean.value = 0.9*discriminator.outputMean.value
+            + 0.1*withoutDerivative(at: scores).mean()
+        
         return loss.generatorLoss(fake: scores)
     }
     optG.update(&generator, along: 𝛁generator)
@@ -47,7 +52,7 @@ func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Flo
         let realScores = discriminator(minibatch)
         let fakeScores = discriminator(fakeImages)
         
-        // update output mean here
+        // update output mean
         discriminator.outputMean.value = 0.9*discriminator.outputMean.value + 0.1*fakeScores.mean()
         
         return loss.discriminatorLoss(real: realScores, fake: fakeScores)
