@@ -20,29 +20,40 @@ public func lerp(_ a: Tensor<Float>, _ b: Tensor<Float>, rate: Float) -> Tensor<
 
 @differentiable
 public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
-    let groupSize = 4
     let batchSize = x.shape[0]
     let height = x.shape[1]
     let width = x.shape[2]
-    let channels = x.shape[3]
-    let M = batchSize / groupSize
+//    let channels = x.shape[3]
     
-    // Compute stddev of each pixel in group
-    var y = x.reshaped(to: [groupSize, M, height, width, channels])
-    let mean = y.mean(alongAxes: 0) // [1, M, height, width, channels]
-    y = (y - mean).squared().mean(squeezingAxes: 0) // [M, height, width, channels]
-    y = sqrt(y + 1e-8) // stddev
+    // All images
+    let mean = x.mean(alongAxes: 0)
+    let variance = (x - mean).squared().mean(alongAxes: 0)
+    let std = sqrt(variance + 1e-8)
     
-    y = y.mean(alongAxes: 1, 2, 3) // [M, 1, 1, 1]
-    y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
-    y = y.reshaped(to: [batchSize, height, width, 1])
+    var y = std.mean(alongAxes: 1, 2, 3) // [1, 1, 1, 1]
+    y = y.tiled(multiples: Tensor([Int32(batchSize), Int32(height), Int32(width), 1]))
     
+    // group version
+//    let groupSize = 4
+//    let M = batchSize / groupSize
+//
+//    // Compute stddev of each pixel in group
+//    var y = x.reshaped(to: [groupSize, M, height, width, channels])
+//    let mean = y.mean(alongAxes: 0) // [1, M, height, width, channels]
+//    y = (y - mean).squared().mean(squeezingAxes: 0) // [M, height, width, channels]
+//    y = sqrt(y + 1e-8) // stddev
+//
+//    y = y.mean(alongAxes: 1, 2, 3) // [M, 1, 1, 1]
+//    y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
+//    y = y.reshaped(to: [batchSize, height, width, 1])
+//
+  
+    // Concatenation
     // https://bugs.swift.org/browse/TF-705
     //return x.concatenated(with: y, alongAxis: 3)
-    
     // https://bugs.swift.org/browse/TF-706
     // return Tensor(concatenating: [x, y], alongAxis: 3)
-    
+
     // Dirty hack to avoid the bugs above
     let xs = x.unstacked(alongAxis: 3)
     y = y.squeezingShape(at: 3)
