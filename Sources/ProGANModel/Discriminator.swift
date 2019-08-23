@@ -102,6 +102,8 @@ public struct Discriminator: Layer {
     
     @noDerivative
     public private(set) var level = 1
+    @noDerivative
+    public var alpha: Float = 1.0
     
     // Mean of output for fake images
     @noDerivative
@@ -131,7 +133,7 @@ public struct Discriminator: Layer {
         let lastIndex = level-2
         x2 = blocks[lastIndex](DiscriminatorBlockInput(x: x2, noiseScale: noiseScale))
         
-        var x = lerp(x1, x2, rate: GlobalState.alpha)
+        var x = lerp(x1, x2, rate: alpha)
         
         for l in (0..<lastIndex).reversed() {
             x = blocks[l](DiscriminatorBlockInput(x: x, noiseScale: noiseScale))

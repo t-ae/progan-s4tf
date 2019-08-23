@@ -18,6 +18,11 @@ func grow() {
     optD = Adam(for: discriminator, learningRate: Config.discriminatorLearningRate, beta1: 0)
 }
 
+func setAlpha(_ alpha: Float) {
+    generator.alpha = alpha
+    discriminator.alpha = alpha
+}
+
 let imageLoader = try ImageLoader(imageDirectory: Config.imageDirectory)
 
 let loss = Config.loss.createLoss()
@@ -109,9 +114,9 @@ var imageCount = 0
 
 for step in 1... {
     if phase == .fading {
-        GlobalState.alpha = Float(imageCount) / Float(Config.numImagesPerPhase)
+        setAlpha(Float(imageCount) / Float(Config.numImagesPerPhase))
     }
-    print("step: \(step), alpha: \(GlobalState.alpha)")
+    print("step: \(step), alpha: \(generator.alpha)")
     
     let level = generator.level
     
@@ -140,13 +145,13 @@ for step in 1... {
         switch (phase, level) {
         case (.fading, _):
             phase = .stabilizing
-            GlobalState.alpha = 1
+            setAlpha(1)
             print("Start stabilizing lv: \(generator.level)")
         case (.stabilizing, Config.maxLevel):
             break
         case (.stabilizing, _):
             phase = .fading
-            GlobalState.alpha = 0
+            setAlpha(0)
             grow()
             print("Start fading lv: \(generator.level)")
         }

@@ -70,6 +70,8 @@ public struct Generator: Layer {
     
     @noDerivative
     public private(set) var level = 1
+    @noDerivative
+    public var alpha: Float = 1.0
     
     public init() {}
     
@@ -96,7 +98,7 @@ public struct Generator: Layer {
         
         var x2 = blocks[level-2](x)
         x2 = toRGB2(x2)
-        return lerp(x1, x2, rate: GlobalState.alpha)
+        return lerp(x1, x2, rate: alpha)
     }
     
     static let ioChannels = [
