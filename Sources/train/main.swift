@@ -103,6 +103,14 @@ enum Phase {
 var phase: Phase = .stabilizing
 var imageCount = 0
 
+// Histograms
+for (k, v) in generator.getHistogramWeights() {
+    writer.addHistogram(tag: k, values: v, globalStep: 0)
+}
+for (k, v) in discriminator.getHistogramWeights() {
+    writer.addHistogram(tag: k, values: v, globalStep: 0)
+}
+
 for step in 1... {
     if phase == .fading {
         setAlpha(Float(imageCount) / Float(Config.numImagesPerPhase))
@@ -151,7 +159,10 @@ for step in 1... {
     if step.isMultiple(of: Config.numStepsToInfer) {
         infer(level: level, step: step)
         
-        // Histogram of discriminator
+        // Histograms
+        for (k, v) in generator.getHistogramWeights() {
+            writer.addHistogram(tag: k, values: v, globalStep: step)
+        }
         for (k, v) in discriminator.getHistogramWeights() {
             writer.addHistogram(tag: k, values: v, globalStep: step)
         }

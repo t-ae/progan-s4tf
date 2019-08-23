@@ -130,36 +130,3 @@ public struct EqualizedConv2D: Layer {
                           dilations: (1, 1, 1, 1)) + bias)
     }
 }
-
-public struct EqualizedTransposedConv2D: Layer {
-    public var conv: TransposedConv2D<Float>
-    @noDerivative public let scale: Tensor<Float>
-    
-    public init(inputChannels: Int,
-                outputChannels: Int,
-                kernelSize: (Int, Int),
-                strides: (Int, Int) = (1, 1),
-                padding: Padding = .same,
-                activation: @escaping TransposedConv2D<Float>.Activation = identity,
-                gain: Float = sqrt(2)) {
-        let filter = Tensor<Float>(randomNormal: [kernelSize.0,
-                                                  kernelSize.1,
-                                                  outputChannels,
-                                                  inputChannels])
-        let bias = Tensor<Float>(zeros: [outputChannels])
-        
-        self.conv = TransposedConv2D(filter: filter,
-                                     bias: bias,
-                                     activation: activation,
-                                     strides: strides,
-                                     padding: padding)
-        
-        self.scale = Tensor(gain) / sqrt(Float(inputChannels*kernelSize.0*kernelSize.1))
-    }
-    
-    @differentiable
-    public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        // Scale input instead of conv.filter
-        return conv(input * scale)
-    }
-}

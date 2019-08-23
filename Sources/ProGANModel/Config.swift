@@ -8,7 +8,6 @@ public enum Config {
     // Level 7 generates 256x256 images.
     public static let maxLevel = 7
     
-    public static let useFusedScale = false
     public static let normalizeLatent = true
     
     public static let loss: LossType = .lsgan

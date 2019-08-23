@@ -3,7 +3,7 @@ import TensorFlow
 
 // Add per channel/batch noise
 // https://github.com/tkarras/progressive_growing_of_gans/blob/original-theano-version/network.py#L360-L400
-@differentiable
+@differentiable(wrt: x)
 func addNoise(_ x: Tensor<Float>, noiseScale: Float) -> Tensor<Float> {
     let noiseShape: TensorShape = [x.shape[0], 1, 1, x.shape[3]]
     let scale = noiseScale * sqrt(Float(x.shape[3]))
@@ -24,8 +24,6 @@ struct DiscriminatorBlock: Layer {
     var avgPool = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
     
     init(inputChannels: Int, outputChannels: Int) {
-        let stride = Config.useFusedScale ? 2 : 1
-        
         conv1 = EqualizedConv2D(inputChannels: inputChannels,
                                 outputChannels: outputChannels,
                                 kernelSize: (3, 3),
@@ -33,7 +31,6 @@ struct DiscriminatorBlock: Layer {
         conv2 = EqualizedConv2D(inputChannels: outputChannels,
                                 outputChannels: outputChannels,
                                 kernelSize: (3, 3),
-                                strides: (stride, stride),
                                 activation: lrelu)
     }
     
@@ -44,9 +41,7 @@ struct DiscriminatorBlock: Layer {
         x = conv1(x)
         x = addNoise(x, noiseScale: input.noiseScale)
         x = conv2(x)
-        if !Config.useFusedScale {
-            x = avgPool(x)
-        }
+        x = avgPool(x)
         return x
     }
 }
@@ -167,10 +162,17 @@ public struct Discriminator: Layer {
     }
     
     public func getHistogramWeights() -> [String: Tensor<Float>] {
-        return [
-            "disc/last_conv1": lastBlock.conv1.filter,
-            "disc/last_conv2": lastBlock.conv2.filter,
-            "disc/last_dense": lastBlock.dense.weight,
+        var dict = [
+            "disc/last.conv1": lastBlock.conv1.filter,
+            "disc/last.conv2": lastBlock.conv2.filter,
+            "disc/last.dense": lastBlock.dense.weight,
         ]
+        
+        for i in 0..<blocks.count {
+            dict["disc/blocks[\(i)].conv1"] = blocks[i].conv1.filter
+            dict["disc/blocks[\(i)].conv2"] = blocks[i].conv2.filter
+        }
+        
+        return dict
     }
 }

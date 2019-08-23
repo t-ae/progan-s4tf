@@ -28,19 +28,16 @@ public struct GeneratorFirstBlock: Layer {
 }
 
 public struct GeneratorBlock: Layer {
-    var conv1: EqualizedTransposedConv2D
+    var conv1: EqualizedConv2D
     var conv2: EqualizedConv2D
     
     var upsample = UpSampling2D<Float>(size: 2)
     
     public init(inputChannels: Int, outputChannels: Int) {
-        let stride = Config.useFusedScale ? 2 : 1
-        
-        conv1 = EqualizedTransposedConv2D(inputChannels: inputChannels,
-                                          outputChannels: outputChannels,
-                                          kernelSize: (3, 3),
-                                          strides: (stride, stride),
-                                          activation: lrelu)
+        conv1 = EqualizedConv2D(inputChannels: inputChannels,
+                                outputChannels: outputChannels,
+                                kernelSize: (3, 3),
+                                activation: lrelu)
         conv2 = EqualizedConv2D(inputChannels: outputChannels,
                                 outputChannels: outputChannels,
                                 kernelSize: (3, 3),
@@ -50,9 +47,7 @@ public struct GeneratorBlock: Layer {
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
-        if !Config.useFusedScale {
-            x = upsample(x)
-        }
+        x = upsample(x)
         x = pixelNormalization(conv1(x))
         x = pixelNormalization(conv2(x))
         return x
@@ -123,5 +118,19 @@ public struct Generator: Layer {
         blocks.append(GeneratorBlock(inputChannels: io.0, outputChannels: io.1))
         toRGB1 = toRGB2
         toRGB2 = EqualizedConv2D(inputChannels: io.1, outputChannels: 3, kernelSize: (1, 1), activation: identity, gain: 1)
+    }
+    
+    public func getHistogramWeights() -> [String: Tensor<Float>] {
+        var dict = [
+            "gen/first.dense": firstBlock.dense.weight,
+            "gen/first.conv": firstBlock.conv.filter,
+        ]
+        
+        for i in 0..<blocks.count {
+            dict["gen/blocks[\(i)].conv1"] = blocks[i].conv1.filter
+            dict["gen/blocks[\(i)].conv2"] = blocks[i].conv2.filter
+        }
+        
+        return dict
     }
 }
