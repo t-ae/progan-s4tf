@@ -7,8 +7,8 @@ import ProGANModel
 var generator = Generator()
 var discriminator = Discriminator()
 
-var optG = Adam(for: generator, learningRate: 1e-3, beta1: 0)
-var optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0)
+var optG = Adam(for: generator, learningRate: 1e-3, beta1: 0, beta2: 0.99)
+var optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0, beta2: 0.99)
 
 func grow() {
     generator.grow()
