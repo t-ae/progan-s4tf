@@ -11,14 +11,14 @@ public enum Config {
     public static let useFusedScale = false
     public static let normalizeLatent = true
     
-    public static let loss: LossType = .wgan
+    public static let loss: LossType = .lsgan
     
     // MARK: Training settings
     public static let generatorLearningRate: Float = 1e-3
     public static let discriminatorLearningRate: Float = 1e-3
     
     // minibatch size for each level
-    public static let minibatchSizeSchedule = [16, 16, 16, 16, 16, 16, 16]
+    public static let minibatchSizeSchedule = [32, 32, 32, 32, 16, 16, 16]
     
     public static let numImagesPerPhase = 600_000
     
