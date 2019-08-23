@@ -8,7 +8,8 @@ public struct GeneratorFirstBlock: Layer {
     public init() {
         dense = EqualizedDense(inputSize: Config.latentSize,
                                outputSize: 256*4*4,
-                               activation: lrelu)
+                               activation: lrelu,
+                               gain: sqrt(2)/4)
         conv = EqualizedConv2D(inputChannels: 256,
                                outputChannels: 256,
                                kernelSize: (3, 3),
