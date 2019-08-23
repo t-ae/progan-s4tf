@@ -38,6 +38,46 @@ final class ProGANModelTests: XCTestCase {
         }
     }
     
+    func testGeneratorGrow() {
+        var generator = Generator()
+        let noise = sampleNoise(size: 10)
+        
+        let upsample = UpSampling2D<Float>(size: 2)
+        var small = generator(noise)
+        
+        for _ in 0..<6 {
+            generator.grow()
+            generator.alpha = 0
+            let large = generator(noise)
+            
+            XCTAssertTrue(upsample(small).isAlmostEqual(to: large))
+            
+            generator.alpha = 1
+            small = generator(noise)
+        }
+    }
+    
+    func testDiscriminatorGrow() {
+        var discriminator = Discriminator()
+        
+        var score1 = discriminator(Tensor<Float>(ones: [4, 4, 4, 3]))
+        
+        for _ in 0..<6 {
+            discriminator.grow()
+            discriminator.alpha = 0
+            let size = Int(pow(2.0, Double(discriminator.level)) * 2)
+            
+            let image = Tensor<Float>(ones: [4, size, size, 3])
+            
+            let score2 = discriminator(image)
+            
+            XCTAssertTrue(score1.isAlmostEqual(to: score2))
+            
+            discriminator.alpha = 1
+            score1 = discriminator(image)
+        }
+    }
+    
     func testGeneratorDifferentiability() {
         var gen = Generator()
         for _ in 0..<3 {
@@ -119,6 +159,8 @@ final class ProGANModelTests: XCTestCase {
     static let allTests = [
         ("testGeneratorSize", testGeneratorSize),
         ("testDiscriminatorSize", testDiscriminatorSize),
+        ("testGeneratorGrow", testGeneratorGrow),
+        ("testDiscriminatorGrow", testDiscriminatorGrow),
         ("testGeneratorDifferentiability", testGeneratorDifferentiability),
         ("testDiscriminatorDifferentiability", testDiscriminatorDifferentiability),
         ("testGeneratorTrainability", testGeneratorTrainability),
