@@ -1,11 +1,11 @@
 import Foundation
 import TensorFlow
 
-// Add per channel/batch noise
+// Add per channel noise
 // https://github.com/tkarras/progressive_growing_of_gans/blob/original-theano-version/network.py#L360-L400
 @differentiable(wrt: x)
 func addNoise(_ x: Tensor<Float>, noiseScale: Float) -> Tensor<Float> {
-    let noiseShape: TensorShape = [x.shape[0], 1, 1, x.shape[3]]
+    let noiseShape: TensorShape = [1, 1, 1, x.shape[3]]
     let scale = noiseScale * sqrt(Float(x.shape[3]))
     let noise = Tensor<Float>(randomNormal: noiseShape) * scale + 1
     return x * noise
