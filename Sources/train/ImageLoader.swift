@@ -28,20 +28,19 @@ class ImageLoader {
     }
     
     func minibatch(size: Int, imageSize: (height: Int, width: Int)) -> Tensor<Float> {
-        if fileNames.count >= index+size {
+        if fileNames.count < index+size {
             resetIndex()
             shuffle()
         }
         
         var tensors: [Tensor<Float>]
         let fileNames = self.fileNames[index..<index+size]
-
-        index += size
+        defer { index += size }
         
         if multiThread {
             tensors = []
             DispatchQueue.concurrentPerform(iterations: size) { i in
-                let url = imageDirectory.appendingPathComponent(fileNames[i])
+                let url = imageDirectory.appendingPathComponent(fileNames[i + index])
                 let image = try! Image<RGB, Float>(contentsOf: url)
                 let resized = image.resize(width: imageSize.width, height: imageSize.height)
                 
