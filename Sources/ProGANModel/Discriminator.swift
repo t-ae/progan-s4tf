@@ -90,7 +90,7 @@ public struct Discriminator: Layer {
     
     var blocks: [DiscriminatorBlock] = []
     
-    var fromRGB1 = EqualizedConv2D(inputChannels: 3, outputChannels: 1, kernelSize: (1, 1)) // dummy at first
+    var fromRGB1 = EqualizedConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1)) // dummy at first
     var fromRGB2 = EqualizedConv2D(inputChannels: 3, outputChannels: 256, kernelSize: (1, 1))
     
     var downsample = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))

@@ -103,10 +103,10 @@ func infer(level: Int, step: Int) {
 
 func addHistograms(step: Int) {
     for (k, v) in generator.getHistogramWeights() {
-        writer.addHistogram(tag: k, values: v, globalStep: 0)
+        writer.addHistogram(tag: k, values: v, globalStep: step)
     }
     for (k, v) in discriminator.getHistogramWeights() {
-        writer.addHistogram(tag: k, values: v, globalStep: 0)
+        writer.addHistogram(tag: k, values: v, globalStep: step)
     }
 }
 
