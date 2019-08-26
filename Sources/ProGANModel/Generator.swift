@@ -94,6 +94,7 @@ public struct Generator: Layer {
         
         var x2 = blocks[level-2](x)
         x2 = toRGB2(x2)
+        
         return lerp(x1, x2, rate: alpha)
     }
     
@@ -122,13 +123,15 @@ public struct Generator: Layer {
     
     public func getHistogramWeights() -> [String: Tensor<Float>] {
         var dict = [
-            "gen/first.dense": firstBlock.dense.weight,
-            "gen/first.conv": firstBlock.conv.filter,
+            "gen\(level)/first.dense": firstBlock.dense.weight,
+            "gen\(level)/first.conv": firstBlock.conv.filter,
+            "gen\(level)/toRGB1": toRGB1.filter,
+            "gen\(level)/toRGB2": toRGB2.filter,
         ]
         
         for i in 0..<blocks.count {
-            dict["gen/block\(i).conv1"] = blocks[i].conv1.filter
-            dict["gen/block\(i).conv2"] = blocks[i].conv2.filter
+            dict["gen\(level)/block\(i).conv1"] = blocks[i].conv1.filter
+            dict["gen\(level)/block\(i).conv2"] = blocks[i].conv2.filter
         }
         
         return dict
