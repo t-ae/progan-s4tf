@@ -101,6 +101,15 @@ func infer(level: Int, step: Int) {
     writer.addImage(tag: "lv\(level)", image: images, globalStep: step)
 }
 
+func addHistograms(step: Int) {
+    for (k, v) in generator.getHistogramWeights() {
+        writer.addHistogram(tag: k, values: v, globalStep: 0)
+    }
+    for (k, v) in discriminator.getHistogramWeights() {
+        writer.addHistogram(tag: k, values: v, globalStep: 0)
+    }
+}
+
 enum Phase {
     case fading, stabilizing
 }
@@ -108,13 +117,8 @@ enum Phase {
 var phase: Phase = .stabilizing
 var imageCount = 0
 
-// Histograms
-for (k, v) in generator.getHistogramWeights() {
-    writer.addHistogram(tag: k, values: v, globalStep: 0)
-}
-for (k, v) in discriminator.getHistogramWeights() {
-    writer.addHistogram(tag: k, values: v, globalStep: 0)
-}
+// Initial histogram
+addHistograms(step: 0)
 
 for step in 1... {
     if phase == .fading {
@@ -158,18 +162,14 @@ for step in 1... {
             setAlpha(0)
             grow()
             print("Start fading lv: \(generator.level)")
+            
+            infer(level: level, step: step)
+            addHistograms(step: step)
         }
     }
     
     if step.isMultiple(of: Config.numStepsToInfer) {
         infer(level: level, step: step)
-        
-        // Histograms
-        for (k, v) in generator.getHistogramWeights() {
-            writer.addHistogram(tag: k, values: v, globalStep: step)
-        }
-        for (k, v) in discriminator.getHistogramWeights() {
-            writer.addHistogram(tag: k, values: v, globalStep: step)
-        }
+        addHistograms(step: step)
     }
 }
