@@ -2,7 +2,7 @@ import Foundation
 import TensorFlow
 
 public enum LossType {
-    case nonSaturating, lsgan, wgan
+    case nonSaturating, lsgan
     
     public func createLoss() -> Loss {
         switch self {
@@ -10,8 +10,6 @@ public enum LossType {
             return NonSaturatingLoss()
         case .lsgan:
             return LSGANLoss()
-        case .wgan:
-            return WGANLoss()
         }
     }
 }
