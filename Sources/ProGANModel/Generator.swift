@@ -31,8 +31,6 @@ public struct GeneratorBlock: Layer {
     var conv1: EqualizedConv2D
     var conv2: EqualizedConv2D
     
-    var upsample = UpSampling2D<Float>(size: 2)
-    
     public init(inputChannels: Int, outputChannels: Int) {
         conv1 = EqualizedConv2D(inputChannels: inputChannels,
                                 outputChannels: outputChannels,
@@ -47,7 +45,7 @@ public struct GeneratorBlock: Layer {
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
-        x = upsample(x)
+        x = resize2xBilinear(images: x)
         x = pixelNormalization(conv1(x))
         x = pixelNormalization(conv2(x))
         return x
@@ -58,8 +56,6 @@ public struct Generator: Layer {
     public var firstBlock = GeneratorFirstBlock()
     
     public var blocks: [GeneratorBlock] = []
-    
-    public var upsample = UpSampling2D<Float>(size: 2)
     
     public var toRGB1 = EqualizedConv2D(inputChannels: 1, outputChannels: 1, kernelSize: (1, 1), activation: identity, gain: 1) // dummy at first
     public var toRGB2 = EqualizedConv2D(inputChannels: 256, outputChannels: 3, kernelSize: (1, 1), activation: identity, gain: 1)
@@ -90,7 +86,7 @@ public struct Generator: Layer {
         
         var x1 = x
         x1 = toRGB1(x1)
-        x1 = upsample(x1)
+        x1 = resize2xBilinear(images: x1)
         
         var x2 = blocks[level-2](x)
         x2 = toRGB2(x2)
