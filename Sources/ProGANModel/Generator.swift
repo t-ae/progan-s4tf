@@ -76,7 +76,7 @@ public struct Generator: Layer {
         x = firstBlock(x)
         
         guard level > 1 else {
-            // 常にalpha = 1
+            // alpha = 1
             return toRGB2(x)
         }
         
