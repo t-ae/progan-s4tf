@@ -23,31 +23,30 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     let batchSize = x.shape[0]
     let height = x.shape[1]
     let width = x.shape[2]
-//    let channels = x.shape[3]
+    let channels = x.shape[3]
     
     // All images
-    let mean = x.mean(alongAxes: 0)
-    let variance = squaredDifference(x, mean).mean(alongAxes: 0)
-    let std = sqrt(variance + 1e-8)
-    
-    var y = std.mean(alongAxes: 1, 2, 3) // [1, 1, 1, 1]
-    y = y.tiled(multiples: Tensor([Int32(batchSize), Int32(height), Int32(width), 1]))
+//    let mean = x.mean(alongAxes: 0)
+//    let variance = squaredDifference(x, mean).mean(alongAxes: 0)
+//    let std = sqrt(variance + 1e-8)
+//
+//    var y = std.mean(alongAxes: 1, 2, 3) // [1, 1, 1, 1]
+//    y = y.tiled(multiples: Tensor([Int32(batchSize), Int32(height), Int32(width), 1]))
     
     // group version
-//    let groupSize = 4
-//    let M = batchSize / groupSize
-//
-//    // Compute stddev of each pixel in group
-//    var y = x.reshaped(to: [groupSize, M, height, width, channels])
-//    let mean = y.mean(alongAxes: 0) // [1, M, height, width, channels]
-//    y = squaredDifference(x, mean).mean(squeezingAxes: 0) // [M, height, width, channels]
-//    y = sqrt(y + 1e-8) // stddev
-//
-//    y = y.mean(alongAxes: 1, 2, 3) // [M, 1, 1, 1]
-//    y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
-//    y = y.reshaped(to: [batchSize, height, width, 1])
-//
-  
+    let groupSize = 4
+    let M = batchSize / groupSize
+
+    // Compute stddev of each pixel in group
+    var y = x.reshaped(to: [groupSize, M, height, width, channels])
+    let mean = y.mean(alongAxes: 0) // [1, M, height, width, channels]
+    y = squaredDifference(x, mean).mean(squeezingAxes: 0) // [M, height, width, channels]
+    y = sqrt(y + 1e-8) // stddev
+
+    y = y.mean(alongAxes: 1, 2, 3) // [M, 1, 1, 1]
+    y = y.tiled(multiples: Tensor([Int32(groupSize), Int32(height), Int32(width), 1]))
+    y = y.reshaped(to: [batchSize, height, width, 1])
+
     // Concatenation
     // https://bugs.swift.org/browse/TF-705
     //return x.concatenated(with: y, alongAxis: 3)
