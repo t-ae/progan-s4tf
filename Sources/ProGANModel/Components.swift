@@ -40,7 +40,7 @@ public func minibatchStdConcat(_ x: Tensor<Float>) -> Tensor<Float> {
     // Compute stddev of each pixel in group
     var y = x.reshaped(to: [groupSize, M, height, width, channels])
     let mean = y.mean(alongAxes: 0) // [1, M, height, width, channels]
-    y = squaredDifference(x, mean).mean(squeezingAxes: 0) // [M, height, width, channels]
+    y = squaredDifference(y, mean).mean(squeezingAxes: 0) // [M, height, width, channels]
     y = sqrt(y + 1e-8) // stddev
 
     y = y.mean(alongAxes: 1, 2, 3) // [M, 1, 1, 1]
