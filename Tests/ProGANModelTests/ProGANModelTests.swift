@@ -42,7 +42,6 @@ final class ProGANModelTests: XCTestCase {
         var generator = Generator()
         let noise = sampleNoise(size: 10)
         
-        let upsample = UpSampling2D<Float>(size: 2)
         var small = generator(noise)
         
         for _ in 0..<6 {
@@ -50,7 +49,7 @@ final class ProGANModelTests: XCTestCase {
             generator.alpha = 0
             let large = generator(noise)
             
-            XCTAssertTrue(upsample(small).isAlmostEqual(to: large))
+            XCTAssertTrue(resize2xBilinear(images: small).isAlmostEqual(to: large))
             
             generator.alpha = 1
             small = generator(noise)
