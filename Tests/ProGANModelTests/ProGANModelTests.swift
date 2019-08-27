@@ -87,9 +87,14 @@ final class ProGANModelTests: XCTestCase {
             gen(x).sum()
         }
         
-        let noise = sampleNoise(size: 10)
+        let noise = sampleNoise(size: 1)
         let grad = df(noise)
         XCTAssertEqual(grad.shape, noise.shape)
+        
+        let dgen = gen.gradient { gen in
+            gen(noise).sum()
+        }
+        print(dgen.allKeyPaths)
     }
     
     func testDiscriminatorDifferentiability() {
@@ -107,6 +112,11 @@ final class ProGANModelTests: XCTestCase {
         let image = Tensor<Float>(zeros: [8, size, size, 3])
         let grad = df(image)
         XCTAssertEqual(grad.shape, image.shape)
+        
+        let ddis = dis.gradient { dis in
+            dis(image).sum()
+        }
+        print(ddis.allKeyPaths)
     }
     
     func testGeneratorTrainability() {

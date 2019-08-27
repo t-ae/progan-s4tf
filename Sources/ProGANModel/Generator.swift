@@ -19,7 +19,8 @@ struct GBlock: Layer {
             x = x.reshaped(to: [x.shape[0], 4, 4, -1])
         }
         x = pixelNormalization(x)
-        x = pixelNormalization(conv2(x))
+        x = conv2(x)
+        x = pixelNormalization(x)
         
         return x
     }
@@ -51,16 +52,16 @@ public struct Generator: Layer {
         toRGBs.append(.init(inputChannels: channels[1], outputChannels: 3,
                             kernelSize: (1, 1), padding: .valid))
         
-        for i in 1..<Config.maxLevel-1 {
+        for lv in 2...Config.maxLevel {
             let block = GBlock(
-                conv1: .init(inputChannels: channels[i], outputChannels: channels[i+1],
+                conv1: .init(inputChannels: channels[lv-1], outputChannels: channels[lv],
                              kernelSize: (3, 3), padding: .same, activation: lrelu),
-                conv2: .init(inputChannels: channels[i+1], outputChannels: channels[i+1],
+                conv2: .init(inputChannels: channels[lv], outputChannels: channels[lv],
                              kernelSize: (3, 3), padding: .same, activation: lrelu),
                 firstBlock: false
             )
             blocks.append(block)
-            toRGBs.append(.init(inputChannels: channels[i+1], outputChannels: 3,
+            toRGBs.append(.init(inputChannels: channels[lv], outputChannels: 3,
                                 kernelSize: (1, 1), padding: .valid))
         }
     }
@@ -78,8 +79,8 @@ public struct Generator: Layer {
             return toRGBs[0](blocks[0](x))
         }
         
-        for lv in 0..<level-2 {
-            x = blocks[lv](x)
+        for i in 0..<level-2 {
+            x = blocks[i](x)
         }
         
         x = blocks[level-2](x)
