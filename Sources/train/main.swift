@@ -14,8 +14,9 @@ func grow() {
     generator.grow()
     discriminator.grow()
     
-    optG = Adam(for: generator, learningRate: Config.generatorLearningRate, beta1: 0)
-    optD = Adam(for: discriminator, learningRate: Config.discriminatorLearningRate, beta1: 0)
+    // reset optimizers
+//    optG = Adam(for: generator, learningRate: Config.generatorLearningRate, beta1: 0)
+//    optD = Adam(for: discriminator, learningRate: Config.discriminatorLearningRate, beta1: 0)
 }
 
 func setAlpha(_ alpha: Float) {
