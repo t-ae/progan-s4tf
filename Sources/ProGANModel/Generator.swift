@@ -2,25 +2,15 @@ import Foundation
 import TensorFlow
 
 struct GBlock: Layer {
-    struct Input: Differentiable {
-        var x: Tensor<Float>
-        @noDerivative
-        var outputRGB: Bool = false
-    }
-    struct Output: Differentiable {
-        var x: Tensor<Float>
-        var rgb: Tensor<Float>
-    }
     var conv1: EqualizedConv2D
     var conv2: EqualizedConv2D
-    var toRGB: EqualizedConv2D
     
     @noDerivative
     let firstBlock: Bool
     
     @differentiable
-    func callAsFunction(_ input: Input) -> Output {
-        var x = input.x
+    func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+        var x = input
         if !firstBlock {
             x = resize2xBilinear(images: x)
         }
@@ -30,13 +20,8 @@ struct GBlock: Layer {
         }
         x = pixelNormalization(x)
         x = pixelNormalization(conv2(x))
-        let rgb: Tensor<Float>
-        if input.outputRGB {
-            rgb = toRGB(x)
-        } else {
-            rgb = Tensor(0)
-        }
-        return Output(x: x, rgb: rgb)
+        
+        return x
     }
 }
 
@@ -46,6 +31,7 @@ public struct Generator: Layer {
     ]
     
     var blocks: [GBlock] = []
+    var toRGBs: [EqualizedConv2D] = []
     
     @noDerivative
     public private(set) var level = 1
@@ -59,11 +45,11 @@ public struct Generator: Layer {
                          kernelSize: (1, 1), padding: .valid, activation: lrelu), // Dense
             conv2: .init(inputChannels: channels[1], outputChannels: channels[1],
                          kernelSize: (3, 3), padding: .same, activation: lrelu),
-            toRGB: .init(inputChannels: channels[1], outputChannels: 3,
-                         kernelSize: (1, 1), padding: .valid, activation: lrelu),
             firstBlock: true
         )
         blocks.append(firstBlock)
+        toRGBs.append(.init(inputChannels: channels[1], outputChannels: 3,
+                            kernelSize: (1, 1), padding: .valid))
         
         for i in 1..<Config.maxLevel-1 {
             let block = GBlock(
@@ -71,11 +57,11 @@ public struct Generator: Layer {
                              kernelSize: (3, 3), padding: .same, activation: lrelu),
                 conv2: .init(inputChannels: channels[i+1], outputChannels: channels[i+1],
                              kernelSize: (3, 3), padding: .same, activation: lrelu),
-                toRGB: .init(inputChannels: channels[i+1], outputChannels: 3,
-                             kernelSize: (1, 1), padding: .valid, activation: lrelu),
                 firstBlock: false
             )
             blocks.append(block)
+            toRGBs.append(.init(inputChannels: channels[i+1], outputChannels: 3,
+                                kernelSize: (1, 1), padding: .valid))
         }
     }
     
@@ -89,18 +75,18 @@ public struct Generator: Layer {
         
         guard level > 1 else {
             // alpha = 1
-            return blocks[0](.init(x: x, outputRGB: true)).rgb
+            return toRGBs[0](blocks[0](x))
         }
         
         for lv in 0..<level-2 {
-            x = blocks[lv](.init(x: x)).x
+            x = blocks[lv](x)
         }
         
-        let out1 = blocks[level-2](.init(x: x, outputRGB: true))
-        let rgb1 = resize2xBilinear(images: out1.rgb)
+        x = blocks[level-2](x)
+        let rgb1 = resize2xBilinear(images: toRGBs[level-2](x))
         
-        let out2 = blocks[level-1](.init(x: out1.x, outputRGB: true))
-        let rgb2 = out2.rgb
+        x = blocks[level-1](x)
+        let rgb2 = toRGBs[level-1](x)
         
         return lerp(rgb1, rgb2, rate: alpha)
     }
@@ -118,7 +104,7 @@ public struct Generator: Layer {
         for i in 0..<level {
             dict["gen/block\(i).conv1"] = blocks[i].conv1.filter
             dict["gen/block\(i).conv2"] = blocks[i].conv2.filter
-            dict["gen/block\(i).conv2"] = blocks[i].toRGB.filter
+            dict["gen/block\(i).toRGB"] = toRGBs[i].filter
         }
         
         return dict
