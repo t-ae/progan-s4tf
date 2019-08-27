@@ -43,14 +43,14 @@ public struct Generator: Layer {
         let channels = Self.channels
         let firstBlock = GBlock(
             conv1: .init(inputChannels: channels[0], outputChannels: channels[1] * 4*4,
-                         kernelSize: (1, 1), padding: .valid, activation: lrelu), // Dense
+                         kernelSize: (1, 1), padding: .valid, activation: lrelu, gain: sqrt(2)/4), // Dense
             conv2: .init(inputChannels: channels[1], outputChannels: channels[1],
                          kernelSize: (3, 3), padding: .same, activation: lrelu),
             firstBlock: true
         )
         blocks.append(firstBlock)
         toRGBs.append(.init(inputChannels: channels[1], outputChannels: 3,
-                            kernelSize: (1, 1), padding: .valid))
+                            kernelSize: (1, 1), padding: .valid, gain: 1))
         
         for lv in 2...Config.maxLevel {
             let block = GBlock(
@@ -62,7 +62,7 @@ public struct Generator: Layer {
             )
             blocks.append(block)
             toRGBs.append(.init(inputChannels: channels[lv], outputChannels: 3,
-                                kernelSize: (1, 1), padding: .valid))
+                                kernelSize: (1, 1), padding: .valid, gain: 1))
         }
     }
     

@@ -91,7 +91,7 @@ public struct Discriminator: Layer {
             ))
         }
         
-        lastDense = EqualizedDense(inputSize: channels[0], outputSize: 1)
+        lastDense = EqualizedDense(inputSize: channels[0], outputSize: 1, gain: 1)
     }
     
     @differentiable
