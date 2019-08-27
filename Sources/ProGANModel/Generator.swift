@@ -79,11 +79,37 @@ public struct Generator: Layer {
             return toRGBs[0](blocks[0](x))
         }
         
-        for i in 0..<level-2 {
+        // FIXME: Loop causes crash. Unroll it.
+        // https://bugs.swift.org/projects/TF/issues/TF-681
+//        for i in 0..<level-1 {
+//            x = blocks[i](x)
+//        }
+        var i = 0
+        if i < level-1 {
             x = blocks[i](x)
+            i+=1
+        }
+        if i < level-1 {
+            x = blocks[i](x)
+            i+=1
+        }
+        if i < level-1 {
+            x = blocks[i](x)
+            i+=1
+        }
+        if i < level-1 {
+            x = blocks[i](x)
+            i+=1
+        }
+        if i < level-1 {
+            x = blocks[i](x)
+            i+=1
+        }
+        if i < level-1 {
+            x = blocks[i](x)
+            i+=1
         }
         
-        x = blocks[level-2](x)
         let rgb1 = resize2xBilinear(images: toRGBs[level-2](x))
         
         x = blocks[level-1](x)

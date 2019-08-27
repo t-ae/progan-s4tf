@@ -119,9 +119,37 @@ public struct Discriminator: Layer {
         
         var x = lerp(x1, x2, rate: alpha)
         
-        for l in (0...level-2).reversed() {
-            x = blocks[l](.init(x: x, noiseScale: noiseScale))
+        // FIXME: Loop has problem. Unroll it.
+        // https://bugs.swift.org/projects/TF/issues/TF-681
+//        for i in (0...level-2).reversed() {
+//            x = blocks[i](.init(x: x, noiseScale: noiseScale))
+//        }
+        var i = level-2
+        if i >= 0 {
+            x = blocks[i](.init(x: x, noiseScale: noiseScale))
+            i -= 1
         }
+        if i >= 0 {
+            x = blocks[i](.init(x: x, noiseScale: noiseScale))
+            i -= 1
+        }
+        if i >= 0 {
+            x = blocks[i](.init(x: x, noiseScale: noiseScale))
+            i -= 1
+        }
+        if i >= 0 {
+            x = blocks[i](.init(x: x, noiseScale: noiseScale))
+            i -= 1
+        }
+        if i >= 0 {
+            x = blocks[i](.init(x: x, noiseScale: noiseScale))
+            i -= 1
+        }
+        if i >= 0 {
+            x = blocks[i](.init(x: x, noiseScale: noiseScale))
+            i -= 1
+        }
+        
         x = x.squeezingShape(at: 1, 2)
         return lastDense(x)
     }
