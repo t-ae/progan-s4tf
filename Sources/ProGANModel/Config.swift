@@ -3,23 +3,21 @@ import Foundation
 public struct Config: Codable {
     // MARK: Model settings
     public var latentSize: Int
-    
     public var normalizeLatent: Bool
-    
-    public var loss: GANLossType
+    public var enableSpectralNorm: GDPair<Bool>
     
     // MARK: Training settings
+    public var loss: GANLossType
     public var learningRates: GDPair<Float>
-    
     public var startSize: ImageSize
     public var endSize: ImageSize
     public var batchSizes: [ImageSize: Int]
-    
     public var imagesPerPhase: Int
     
     public init(
         latentSize: Int,
         normalizeLatent: Bool,
+        enableSpectralNorm: GDPair<Bool>,
         loss: GANLossType,
         learningRates: GDPair<Float>,
         startSize: ImageSize,
@@ -29,6 +27,7 @@ public struct Config: Codable {
     ) {
         self.latentSize = latentSize
         self.startSize = startSize
+        self.enableSpectralNorm = enableSpectralNorm
         self.endSize = endSize
         self.normalizeLatent = normalizeLatent
         self.loss = loss

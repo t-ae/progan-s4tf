@@ -8,6 +8,7 @@ import ProGANModel
 let config = Config(
     latentSize: 256,
     normalizeLatent: true,
+    enableSpectralNorm: GDPair(G: true, D: true),
     loss: .hinge,
     learningRates: GDPair(G: 1e-3, D: 1e-3),
     startSize: .x4,

@@ -5,13 +5,15 @@ struct DBlock: Layer {
     var conv1: SNConv2D<Float>
     var conv2: SNConv2D<Float>
     
-    init(inputChannels: Int, outputChannels: Int) {
+    init(inputChannels: Int, outputChannels: Int, enableSN: Bool) {
         conv1 = SNConv2D(Conv2D(filterShape: (3, 3, inputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu))
+                                activation: lrelu),
+                         enabled: enableSN)
         conv2 = SNConv2D(Conv2D(filterShape: (3, 3, outputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu))
+                                activation: lrelu),
+                         enabled: enableSN)
     }
     
     @differentiable
@@ -46,28 +48,29 @@ public struct Discriminator: Layer {
     public var alpha: Float = 1.0
     
     public init(config: Config) {
+        let enableSN = config.enableSpectralNorm.G
         fromRGBs = [
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 8), activation: lrelu)), // 256x256
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 16), activation: lrelu)), // 128x128
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 32), activation: lrelu)), // 64x64
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 64), activation: lrelu)), // 32x32
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 128), activation: lrelu)), // 16x16
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu)), // 8x8
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu)), // 4x4
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 8), activation: lrelu), enabled: enableSN), // 256x256
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 16), activation: lrelu), enabled: enableSN), // 128x128
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 32), activation: lrelu), enabled: enableSN), // 64x64
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 64), activation: lrelu), enabled: enableSN), // 32x32
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 128), activation: lrelu), enabled: enableSN), // 16x16
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu), enabled: enableSN), // 8x8
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu), enabled: enableSN), // 4x4
         ]
         blocks = [
-            DBlock(inputChannels: 8, outputChannels: 16), // 256x256
-            DBlock(inputChannels: 16, outputChannels: 32), // 128x128
-            DBlock(inputChannels: 32, outputChannels: 64), // 64x64
-            DBlock(inputChannels: 64, outputChannels: 128), // 32x32
-            DBlock(inputChannels: 128, outputChannels: 256), // 16x16
-            DBlock(inputChannels: 256, outputChannels: 256), // 8x8
-            DBlock(inputChannels: 256, outputChannels: 256), // 4x4
+            DBlock(inputChannels: 8, outputChannels: 16, enableSN: enableSN), // 256x256
+            DBlock(inputChannels: 16, outputChannels: 32, enableSN: enableSN), // 128x128
+            DBlock(inputChannels: 32, outputChannels: 64, enableSN: enableSN), // 64x64
+            DBlock(inputChannels: 64, outputChannels: 128, enableSN: enableSN), // 32x32
+            DBlock(inputChannels: 128, outputChannels: 256, enableSN: enableSN), // 16x16
+            DBlock(inputChannels: 256, outputChannels: 256, enableSN: enableSN), // 8x8
+            DBlock(inputChannels: 256, outputChannels: 256, enableSN: enableSN), // 4x4
         ]
         
         minibatchStdConcat = MinibatchStdConcat(groupSize: 4)
-        lastConv = SNConv2D(Conv2D(filterShape: (3, 3, 257, 64), activation: lrelu))
-        lastDense = SNDense(Dense(inputSize: 4*4*64, outputSize: 1 ))
+        lastConv = SNConv2D(Conv2D(filterShape: (3, 3, 257, 64), activation: lrelu), enabled: enableSN)
+        lastDense = SNDense(Dense(inputSize: 4*4*64, outputSize: 1 ), enabled: enableSN)
     }
     
     @differentiable

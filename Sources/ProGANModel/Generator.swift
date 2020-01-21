@@ -5,13 +5,15 @@ struct GBlock: Layer {
     var conv1: SNConv2D<Float>
     var conv2: SNConv2D<Float>
     
-    init(inputChannels: Int, outputChannels: Int) {
+    init(inputChannels: Int, outputChannels: Int, enableSN: Bool) {
         conv1 = SNConv2D(Conv2D(filterShape: (3, 3, inputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu))
+                                activation: lrelu),
+                         enabled: enableSN)
         conv2 = SNConv2D(Conv2D(filterShape: (3, 3, outputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu))
+                                activation: lrelu),
+                         enabled: enableSN)
     }
     
     @differentiable
@@ -44,25 +46,26 @@ public struct Generator: Layer {
     
     public init(config: Config) {
         self.config = config
+        let enableSN = config.enableSpectralNorm.G
         
-        head = SNDense(Dense(inputSize: config.latentSize, outputSize: 4*4*256))
+        head = SNDense(Dense(inputSize: config.latentSize, outputSize: 4*4*256), enabled: enableSN)
         blocks = [
-            GBlock(inputChannels: 256, outputChannels: 256), // 4x4
-            GBlock(inputChannels: 256, outputChannels: 256), // 8x8
-            GBlock(inputChannels: 256, outputChannels: 128), // 16x16
-            GBlock(inputChannels: 128, outputChannels: 64), // 32x32
-            GBlock(inputChannels: 64, outputChannels: 32), // 64x64
-            GBlock(inputChannels: 32, outputChannels: 16), // 128x128
-            GBlock(inputChannels: 16, outputChannels: 8), // 256x256
+            GBlock(inputChannels: 256, outputChannels: 256, enableSN: enableSN), // 4x4
+            GBlock(inputChannels: 256, outputChannels: 256, enableSN: enableSN), // 8x8
+            GBlock(inputChannels: 256, outputChannels: 128, enableSN: enableSN), // 16x16
+            GBlock(inputChannels: 128, outputChannels: 64, enableSN: enableSN), // 32x32
+            GBlock(inputChannels: 64, outputChannels: 32, enableSN: enableSN), // 64x64
+            GBlock(inputChannels: 32, outputChannels: 16, enableSN: enableSN), // 128x128
+            GBlock(inputChannels: 16, outputChannels: 8, enableSN: enableSN), // 256x256
         ]
         toRGBs = [
-            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3), activation: identity)),
-            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3), activation: identity)),
-            SNConv2D(Conv2D(filterShape: (1, 1, 128, 3), activation: identity)),
-            SNConv2D(Conv2D(filterShape: (1, 1, 64, 3), activation: identity)),
-            SNConv2D(Conv2D(filterShape: (1, 1, 32, 3), activation: identity)),
-            SNConv2D(Conv2D(filterShape: (1, 1, 16, 3), activation: identity)),
-            SNConv2D(Conv2D(filterShape: (1, 1, 8, 3), activation: identity)),
+            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3), activation: identity), enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3), activation: identity), enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 128, 3), activation: identity), enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 64, 3), activation: identity), enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 32, 3), activation: identity), enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 16, 3), activation: identity), enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 8, 3), activation: identity), enabled: enableSN),
         ]
     }
     
