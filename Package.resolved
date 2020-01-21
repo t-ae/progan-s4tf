@@ -2,12 +2,12 @@
   "object": {
     "pins": [
       {
-        "package": "Swim",
-        "repositoryURL": "https://github.com/t-ae/swim.git",
+        "package": "ImageLoader",
+        "repositoryURL": "https://github.com/t-ae/image-loader.git",
         "state": {
           "branch": null,
-          "revision": "eb02e321e0c65237bb29dbd5991905069f69e3d5",
-          "version": "3.3.2"
+          "revision": "3c76ec2ef9d2bf1eef2e8d85dd3d31a586f51b8e",
+          "version": "0.1.8"
         }
       },
       {
@@ -15,8 +15,8 @@
         "repositoryURL": "https://github.com/t-ae/tensorboardx-s4tf.git",
         "state": {
           "branch": null,
-          "revision": "2e65acf5ecf23f8d24c4f1d53a3f59286ae488c8",
-          "version": "0.0.4"
+          "revision": "86dd9916bff07e00ec4305874e16bfef589446ad",
+          "version": "0.0.11"
         }
       }
     ]

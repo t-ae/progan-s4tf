@@ -1,160 +1,175 @@
 import Foundation
 import Python
 import TensorFlow
+import ImageLoader
 import TensorBoardX
 import ProGANModel
 
-var generator = Generator()
-var discriminator = Discriminator()
+let config = Config(
+    latentSize: 256,
+    normalizeLatent: true,
+    loss: .hinge,
+    learningRates: GDPair(G: 1e-3, D: 1e-3),
+    startSize: .x4,
+    endSize: .x256,
+    batchSizes: [
+        .x4: 16,
+        .x8: 16,
+        .x16: 16,
+        .x32: 16,
+        .x64: 16,
+        .x128: 16,
+        .x256: 16,
+    ],
+    imagesPerPhase: 800_000
+)
 
-var optG = Adam(for: generator, learningRate: 1e-3, beta1: 0, beta2: 0.99)
-var optD = Adam(for: discriminator, learningRate: 1e-3, beta1: 0, beta2: 0.99)
+var generator = Generator(config: config)
+var discriminator = Discriminator(config: config)
 
-func grow() {
-    generator.grow()
-    discriminator.grow()
-    
-    // reset optimizers
-//    optG = Adam(for: generator, learningRate: Config.generatorLearningRate, beta1: 0)
-//    optD = Adam(for: discriminator, learningRate: Config.discriminatorLearningRate, beta1: 0)
+var optG = Adam(for: generator, learningRate: config.learningRates.G, beta1: 0, beta2: 0.99)
+var optD = Adam(for: discriminator, learningRate: config.learningRates.D, beta1: 0, beta2: 0.99)
+
+// MARK: - Dataset
+let args = ProcessInfo.processInfo.arguments
+guard args.count == 2 else {
+    print("Image directory is not specified.")
+    exit(1)
 }
+print("Seaerch images...")
+let imageDir = URL(fileURLWithPath: args[1])
+let entries = [Entry](directory: imageDir)
+print("\(entries.count) images found")
 
-func setAlpha(_ alpha: Float) {
-    generator.alpha = alpha
-    discriminator.alpha = alpha
-}
-
-let imageLoader = try ImageLoader(imageDirectory: Config.imageDirectory)
-
-let loss = Config.loss.createLoss()
-
-func train(minibatch: Tensor<Float>) -> (lossG: Tensor<Float>, lossD: Tensor<Float>){
-    Context.local.learningPhase = .training
-    let minibatchSize = minibatch.shape[0]
-    // Update generator
-    let noise1 = sampleNoise(size: minibatchSize)
-    
-    let (lossG, 𝛁generator) = generator.valueWithGradient { generator ->Tensor<Float> in
-        let images = generator(noise1)
-        let scores = discriminator(images)
-        
-        // update output mean
-        discriminator.outputMean.value = 0.9*discriminator.outputMean.value
-            + 0.1*withoutDerivative(at: scores).mean()
-        
-        return loss.generatorLoss(fake: scores)
-    }
-    optG.update(&generator, along: 𝛁generator)
-    
-    // Update discriminator
-    let noise2 = sampleNoise(size: minibatchSize)
-    let fakeImages = generator(noise2)
-    let (lossD, 𝛁discriminator) = discriminator.valueWithGradient { discriminator -> Tensor<Float> in
-        let realScores = discriminator(minibatch)
-        let fakeScores = discriminator(fakeImages)
-        
-        // update output mean
-        discriminator.outputMean.value = 0.9*discriminator.outputMean.value + 0.1*fakeScores.mean()
-        
-        return loss.discriminatorLoss(real: realScores, fake: fakeScores)
-    }
-    optD.update(&discriminator, along: 𝛁discriminator)
-    
-    return (lossG, lossD)
-}
+let criterion = GANLoss(type: config.loss)
 
 // Plot
-let writer = SummaryWriter(logdir: Config.tensorboardOutputDirectory, flushSecs: 10)
+let logdir = URL(fileURLWithPath: "./logdir")
+let writer = SummaryWriter(logdir: logdir)
+func plotImages(tag: String, images: Tensor<Float>,
+                colSize: Int = 8,  globalStep: Int) {
+    var images = images
+    images = (images + 1) / 2
+    images = images.clipped(min: 0, max: 1)
+    writer.addImages(tag: tag,
+                     images: images,
+                     colSize: colSize,
+                     globalStep: globalStep)
+}
+try writer.addJSONText(tag: "config", encodable: config)
 
 // Test
-let testNoise = sampleNoise(size: 64)
-func infer(level: Int, step: Int) {
-    print("infer...")
-    Context.local.learningPhase = .inference
-    
-    var images = generator(testNoise)
-    images = images.padded(forSizes: [(0, 0), (1, 1), (1, 1), (0, 0)], with: 0)
-    let (height, width) = (images.shape[1], images.shape[2])
-    images = images.reshaped(to: [8, 8, height, width, 3])
-    images = images.transposed(withPermutations: [0, 2, 1, 3, 4])
-    images = images.reshaped(to: [8*height, 8*width, 3])
-    
-    // [0, 1] range
-    images = (images + 1) / 2
-    images = images.clipped(min: Tensor(0), max: Tensor(1))
-    
-    writer.addImage(tag: "lv\(level)", image: images, globalStep: step)
-}
-
-func addHistograms(step: Int) {
-    for (k, v) in generator.getHistogramWeights() {
-        writer.addHistogram(tag: k, values: v, globalStep: step)
-    }
-    for (k, v) in discriminator.getHistogramWeights() {
-        writer.addHistogram(tag: k, values: v, globalStep: step)
-    }
-}
+let testRandomNoises = (0..<4).map { _ in sampleNoise(size: 64, latentSize: config.latentSize) }
+let testIntplNoises = (0..<4).map { _ in sampleGridNoise(gridSize: 8, latentSize: config.latentSize) }
 
 enum Phase {
     case fading, stabilizing
 }
 
-var phase: Phase = .stabilizing
-var imageCount = 0
-
-// Initial histogram
-addHistograms(step: 0)
-
-for step in 1... {
-    if phase == .fading {
-        setAlpha(Float(imageCount) / Float(Config.numImagesPerPhase))
-    }
-    print("step: \(step), alpha: \(generator.alpha)")
+func train(imageSize: ImageSize, phase: Phase) {
+    let tag = "\(imageSize.name)_\(phase)"
+    let batchSize = config.batchSizes[imageSize]!
+    let numberOfSteps = config.imagesPerPhase / batchSize
+    print("train: imageSize=\(imageSize), phase=\(phase), numberOfSteps=\(numberOfSteps)")
     
-    let level = generator.level
-    
-    let minibatchSize = Config.minibatchSizeSchedule[level - 1]
-    let imageSize = 2 * Int(powf(2, Float(level)))
-
-    let minibatch = measureTime(label: "minibatch load") {
-        imageLoader.minibatch(size: minibatchSize, imageSize: (imageSize, imageSize))
+    generator.imageSize = imageSize
+    discriminator.imageSize = imageSize
+    if phase == .stabilizing {
+        generator.alpha = 1
+        discriminator.alpha = 1
     }
     
-    let (lossG, lossD) = measureTime(label: "train") {
-        train(minibatch: minibatch)
-    }
+    let loader = ImageLoader(
+        entries: entries,
+        transforms: [
+            Transforms.paddingToSquare(with: 1),
+            Transforms.resize(.area, width: imageSize.rawValue, height: imageSize.rawValue),
+            Transforms.randomFlipHorizontally()
+        ]
+    )
     
-    writer.addScalar(tag: "lv\(level)/lossG", scalar: lossG.scalar!, globalStep: step)
-    writer.addScalar(tag: "lv\(level)/lossD", scalar: lossD.scalar!, globalStep: step)
-    if Config.loss == .lsgan {
-        writer.addScalar(tag: "lv\(level)/dout_mean", scalar: discriminator.outputMean.value.scalar!, globalStep: step)
-    }
+    Context.local.learningPhase = .training
+    var step = 0
     
-    imageCount += minibatchSize
-    
-    if imageCount >= Config.numImagesPerPhase {
-        imageCount = 0
+    loop: while true {
+        loader.shuffle()
         
-        switch (phase, level) {
-        case (.fading, _):
-            phase = .stabilizing
-            setAlpha(1)
-            print("Start stabilizing lv: \(generator.level)")
-        case (.stabilizing, Config.maxLevel):
-            break
-        case (.stabilizing, _):
-            phase = .fading
-            setAlpha(0)
-            grow()
-            print("Start fading lv: \(generator.level)")
+        for batch in loader.iterator(batchSize: batchSize) {
+            print("step: \(step)")
+            let reals = 2 * batch.images - 1
             
-            infer(level: level+1, step: step)
-            addHistograms(step: step)
+            if phase == .fading {
+                let alpha = Float(step) / Float(numberOfSteps)
+                generator.alpha = alpha
+                discriminator.alpha = alpha
+            }
+            
+            let noise = sampleNoise(size: batchSize, latentSize: config.latentSize)
+            
+            // Update Discriminator
+            let 𝛁discriminator = gradient(at: discriminator) { discriminator -> Tensor<Float> in
+                let fakes = generator(noise)
+                let realScores = discriminator(reals)
+                let fakeScores = discriminator(fakes)
+                
+                let loss = criterion.lossD(real: realScores, fake: fakeScores)
+                
+                writer.addScalar(tag: "\(tag)_D/loss", scalar: loss.scalarized(), globalStep: step)
+                if step % 100 == 0 {
+                    plotImages(tag: "\(tag)/reals", images: reals, globalStep: step)
+                    plotImages(tag: "\(tag)/fakes", images: fakes, globalStep: step)
+                    writer.flush()
+                }
+                
+                return loss
+            }
+            optD.update(&discriminator, along: 𝛁discriminator)
+            
+            // Update Generator
+            let 𝛁generator = gradient(at: generator) { generator ->Tensor<Float> in
+                let fakes = generator(noise)
+                let scores = discriminator(fakes)
+                
+                let loss = criterion.lossG(scores)
+                
+                writer.addScalar(tag: "\(tag)_G/loss", scalar: loss.scalarized(), globalStep: step)
+                
+                return loss
+            }
+            optG.update(&generator, along: 𝛁generator)
+            
+            if step % 1000 == 0 {
+                // Write historgrams
+            }
+            
+            step += 1
+            guard step < numberOfSteps else {
+                break loop
+            }
         }
     }
     
-    if step.isMultiple(of: Config.numStepsToInfer) {
-        infer(level: level, step: step)
-        addHistograms(step: step)
+    // Inference
+    Context.local.learningPhase = .inference
+    
+    for (i, noise) in testRandomNoises.enumerated() {
+        let fakes = generator(noise)
+        plotImages(tag: "\(tag)/result_fakes", images: fakes, globalStep: i)
     }
+    for (i, noise) in testIntplNoises.enumerated() {
+        let fakes = generator(noise)
+        plotImages(tag: "\(tag)/result_fakes", images: fakes, globalStep: i)
+    }
+}
+
+train(imageSize: config.startSize, phase: .stabilizing)
+for size in [ImageSize.x4, .x8, .x16, .x32, .x64, .x128, .x256] {
+    guard size > config.startSize else {
+        continue
+    }
+    guard size <= config.endSize else {
+        break
+    }
+    train(imageSize: size, phase: .fading)
+    train(imageSize: size, phase: .stabilizing)
 }

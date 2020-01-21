@@ -1,30 +1,49 @@
 import Foundation
 
-public enum Config {
+public struct Config: Codable {
     // MARK: Model settings
-    public static let latentSize = 256
+    public var latentSize: Int
     
-    // Level 1 generates 4x4 images.
-    // Level 7 generates 256x256 images.
-    public static let maxLevel = 7
+    public var normalizeLatent: Bool
     
-    public static let normalizeLatent = true
-    
-    public static let loss: LossType = .lsgan
+    public var loss: GANLossType
     
     // MARK: Training settings
-    public static let generatorLearningRate: Float = 1e-3
-    public static let discriminatorLearningRate: Float = 1e-3
+    public var learningRates: GDPair<Float>
     
-    // minibatch size for each level
-    public static let minibatchSizeSchedule = [16, 16, 16, 16, 16, 16, 16]
+    public var startSize: ImageSize
+    public var endSize: ImageSize
+    public var batchSizes: [ImageSize: Int]
     
-    public static let numImagesPerPhase = 600_000
+    public var imagesPerPhase: Int
     
-    public static let imageDirectory = URL(fileURLWithPath: "./images")
-    public static let tensorboardOutputDirectory = URL(fileURLWithPath: "./tensorboard")
+    public init(
+        latentSize: Int,
+        normalizeLatent: Bool,
+        loss: GANLossType,
+        learningRates: GDPair<Float>,
+        startSize: ImageSize,
+        endSize: ImageSize,
+        batchSizes: [ImageSize: Int],
+        imagesPerPhase: Int
+    ) {
+        self.latentSize = latentSize
+        self.startSize = startSize
+        self.endSize = endSize
+        self.normalizeLatent = normalizeLatent
+        self.loss = loss
+        self.learningRates = learningRates
+        self.batchSizes = batchSizes
+        self.imagesPerPhase = imagesPerPhase
+    }
+}
+
+public struct GDPair<T: Codable>: Codable {
+    public var G: T
+    public var D: T
     
-    public static let numStepsToInfer = 5_000
-    
-    public static let debugPrint = false
+    public init(G: T, D: T) {
+        self.G = G
+        self.D = D
+    }
 }

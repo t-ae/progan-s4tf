@@ -1,186 +1,107 @@
 import Foundation
 import TensorFlow
 
-// Add per channel noise
-// https://github.com/tkarras/progressive_growing_of_gans/blob/original-theano-version/network.py#L360-L400
-@differentiable(wrt: x)
-func addNoise(_ x: Tensor<Float>, noiseScale: Float) -> Tensor<Float> {
-    let noiseShape: TensorShape = [1, 1, 1, x.shape[3]]
-    let scale = noiseScale * sqrt(Float(x.shape[3]))
-    let noise = Tensor<Float>(randomNormal: noiseShape) * scale + 1
-    return x * noise
-}
-
-@differentiable
-func avgPool(_ x: Tensor<Float>) -> Tensor<Float> {
-    avgPool2D(x, filterSize: (1, 2, 2, 1), strides: (1, 2, 2, 1), padding: .valid)
-}
-
 struct DBlock: Layer {
-    struct Input: Differentiable {
-        var x: Tensor<Float>
-        @noDerivative
-        var noiseScale: Float
+    var conv1: SNConv2D<Float>
+    var conv2: SNConv2D<Float>
+    
+    init(inputChannels: Int, outputChannels: Int) {
+        conv1 = SNConv2D(Conv2D(filterShape: (3, 3, inputChannels, outputChannels),
+                                padding: .same,
+                                activation: lrelu))
+        conv2 = SNConv2D(Conv2D(filterShape: (3, 3, outputChannels, outputChannels),
+                                padding: .same,
+                                activation: lrelu))
     }
     
-    var conv1: EqualizedConv2D
-    var conv2: EqualizedConv2D
-    
-    @noDerivative
-    let lastBlock: Bool
-    
     @differentiable
-    func callAsFunction(_ input: Input) -> Tensor<Float> {
-        var x = input.x
-        if lastBlock {
-            x = minibatchStdConcat(x)
-        }
-        x = addNoise(x, noiseScale: input.noiseScale)
+    func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+        var x = input
         x = conv1(x)
-        x = addNoise(x, noiseScale: input.noiseScale)
         x = conv2(x)
-        if !lastBlock {
-            x = avgPool(x)
-        }
         return x
     }
 }
 
 public struct Discriminator: Layer {
-    static let channels = [
-        256, 256, 256, 256, 128, 64, 32, 16
-    ]
+    var fromRGBs: [SNConv2D<Float>] = []
     
     var blocks: [DBlock] = []
-    var fromRGBs: [EqualizedConv2D] = []
     
-    var lastDense: EqualizedDense
+    
+    var minibatchStdConcat: MinibatchStdConcat<Float>
+    
+    var lastConv: SNConv2D<Float>
+    var lastDense: SNDense<Float>
+    
+    var avgPool = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
     
     @noDerivative
     public private(set) var level = 1
+    
+    @noDerivative
+    public var imageSize: ImageSize = .x4
+    
     @noDerivative
     public var alpha: Float = 1.0
     
-    // Mean of output for fake images
-    @noDerivative
-    public let outputMean: Parameter<Float> = Parameter(Tensor(0))
-    
-    public init() {
-        let channels = Self.channels
+    public init(config: Config) {
+        fromRGBs = [
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 8), activation: lrelu)), // 256x256
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 16), activation: lrelu)), // 128x128
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 32), activation: lrelu)), // 64x64
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 64), activation: lrelu)), // 32x32
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 128), activation: lrelu)), // 16x16
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu)), // 8x8
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu)), // 4x4
+        ]
+        blocks = [
+            DBlock(inputChannels: 8, outputChannels: 16), // 256x256
+            DBlock(inputChannels: 16, outputChannels: 32), // 128x128
+            DBlock(inputChannels: 32, outputChannels: 64), // 64x64
+            DBlock(inputChannels: 64, outputChannels: 128), // 32x32
+            DBlock(inputChannels: 128, outputChannels: 256), // 16x16
+            DBlock(inputChannels: 256, outputChannels: 256), // 8x8
+            DBlock(inputChannels: 256, outputChannels: 256), // 4x4
+        ]
         
-        // first block
-        fromRGBs.append(.init(inputChannels: 3, outputChannels: channels[1],
-                              kernelSize: (1, 1), padding: .valid, activation: lrelu))
-        blocks.append(.init(
-            conv1: .init(inputChannels: channels[1]+1, outputChannels: channels[0],
-                         kernelSize: (3, 3), padding: .same, activation: lrelu),
-            conv2: .init(inputChannels: channels[0], outputChannels: channels[0],
-                         kernelSize: (4, 4), padding: .valid, activation: lrelu),
-            lastBlock: true
-        ))
-        
-        for lv in 2...Config.maxLevel {
-            fromRGBs.append(.init(inputChannels: 3, outputChannels: channels[lv],
-                                  kernelSize: (1, 1), padding: .valid, activation: lrelu))
-            blocks.append(.init(
-                conv1: .init(inputChannels: channels[lv], outputChannels: channels[lv-1],
-                             kernelSize: (3, 3), padding: .same, activation: lrelu),
-                conv2: .init(inputChannels: channels[lv-1], outputChannels: channels[lv-1],
-                             kernelSize: (3, 3), padding: .same, activation: lrelu),
-                lastBlock: false
-            ))
-        }
-        
-        lastDense = EqualizedDense(inputSize: channels[0], outputSize: 1, gain: 1)
+        minibatchStdConcat = MinibatchStdConcat(groupSize: 4)
+        lastConv = SNConv2D(Conv2D(filterShape: (3, 3, 257, 64), activation: lrelu))
+        lastDense = SNDense(Dense(inputSize: 4*4*64, outputSize: 1 ))
     }
     
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
-        
-        // Described in Appendix B
-        let noiseScale: Float
-        if Config.loss == .lsgan {
-            noiseScale = 0.2 * pow(max(outputMean.value.scalar! - 0.5, 0), 2)
-        } else {
-            noiseScale = 0
-        }
-        
-        guard level > 1 else {
-            // alpha = 1
-            var x = fromRGBs[0](input)
-            x = blocks[0](.init(x: x, noiseScale: noiseScale))
-            x = x.squeezingShape(at: 1, 2)
+        var x = input
+        guard imageSize > .x4 else {
+            x = fromRGBs[6](x)
+            x = blocks[6](x)
+            x = minibatchStdConcat(x)
+            x = lastConv(x)
+            x = x.reshaped(to: [-1, 4*4*64])
             return lastDense(x)
         }
         
-        let x1 = fromRGBs[level-2](avgPool(input))
-        var x2 = fromRGBs[level-1](input)
-        x2 = blocks[level-1](.init(x: x2, noiseScale: noiseScale))
+        let startIndex = 8 - imageSize.log2
         
-        var x = lerp(x1, x2, rate: alpha)
+        let x2 = fromRGBs[startIndex+1].callAsFunction(avgPool(x))
+        x = fromRGBs[startIndex](x)
+        x = blocks[startIndex](x)
+        x = avgPool(x)
         
-        // FIXME: Loop has problem. Unroll it.
-        // https://bugs.swift.org/projects/TF/issues/TF-681
-//        for i in (0...level-2).reversed() {
-//            x = blocks[i](.init(x: x, noiseScale: noiseScale))
-//        }
-        var i = level-2
-        if i >= 0 {
-            x = blocks[i](.init(x: x, noiseScale: noiseScale))
-            i -= 1
-        }
-        if i >= 0 {
-            x = blocks[i](.init(x: x, noiseScale: noiseScale))
-            i -= 1
-        }
-        if i >= 0 {
-            x = blocks[i](.init(x: x, noiseScale: noiseScale))
-            i -= 1
-        }
-        if i >= 0 {
-            x = blocks[i](.init(x: x, noiseScale: noiseScale))
-            i -= 1
-        }
-        if i >= 0 {
-            x = blocks[i](.init(x: x, noiseScale: noiseScale))
-            i -= 1
-        }
-        if i >= 0 {
-            x = blocks[i](.init(x: x, noiseScale: noiseScale))
-            i -= 1
+        x = lerp(x2, x, rate: alpha)
+        
+        x = blocks[startIndex+1](x)
+        
+        let blockCount = withoutDerivative(at: blocks.count)
+        for i in startIndex+2..<blockCount {
+            x = avgPool(x)
+            x = blocks[i](x)
         }
         
-        x = x.squeezingShape(at: 1, 2)
-        return lastDense(x)
-    }
-    
-    static let ioChannels = [
-        (256, 256),
-        (256, 256),
-        (128, 256),
-        (64, 128),
-        (32, 64),
-        (16, 32),
-    ]
-    
-    public mutating func grow() {
-        level += 1
-        guard level <= Config.maxLevel else {
-            fatalError("Discriminator.level exceeds Config.maxLevel")
-        }
-    }
-    
-    public func getHistogramWeights() -> [String: Tensor<Float>] {
-        var dict = [
-            "disc\(level)/lastDense": lastDense.weight,
-        ]
-        
-        for i in 0..<level {
-            dict["disc/block\(i).conv1"] = blocks[i].conv1.filter
-            dict["disc/block\(i).conv2"] = blocks[i].conv2.filter
-            dict["disc/block\(i).fromRGB"] = fromRGBs[i].filter
-        }
-        
-        return dict
+        x = minibatchStdConcat(x)
+        x = lastConv(x)
+        x = x.reshaped(to: [-1, 4*4*64])
+        return x
     }
 }
