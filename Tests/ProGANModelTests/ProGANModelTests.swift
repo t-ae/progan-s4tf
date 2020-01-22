@@ -66,6 +66,9 @@ final class ProGANModelTests: XCTestCase {
     }
     
     func testDiscriminatorGrow() {
+        // If .training, SN will change.
+        Context.local.learningPhase = .inference
+        
         var discriminator = Discriminator(config: config)
         
         var score1 = discriminator(Tensor<Float>(ones: [8, 4, 4, 3]))
@@ -78,7 +81,6 @@ final class ProGANModelTests: XCTestCase {
             
             let score2 = discriminator(image)
             
-//            print(score1.scalars[0], score2.scalars[0])
             XCTAssertTrue(score1.isAlmostEqual(to: score2))
             
             discriminator.alpha = 1

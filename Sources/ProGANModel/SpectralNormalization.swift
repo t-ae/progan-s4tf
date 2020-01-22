@@ -33,12 +33,17 @@ public struct SNDense<Scalar: TensorFlowFloatingPoint>: Layer {
         let mat = dense.weight.reshaped(to: [-1, outputDim])
         
         var u = Tensor<Scalar>(0)
+        var v = self.v.value
         for _ in 0..<numPowerIterations {
-            u = l2normalize(matmul(v.value, mat.transposed())) // [1, rows]
-            v.value = l2normalize(matmul(u, mat)) // [1, cols]
+            u = l2normalize(matmul(v, mat.transposed())) // [1, rows]
+            v = l2normalize(matmul(u, mat)) // [1, cols]
         }
         
-        let sigma = matmul(matmul(u, mat), v.value.transposed()) // [1, 1]
+        let sigma = matmul(matmul(u, mat), v.transposed()) // [1, 1]
+        
+        if Context.local.learningPhase == .training {
+            self.v.value = v
+        }
         
         // Should detach sigma?
         return dense.weight / sigma
@@ -77,12 +82,17 @@ public struct SNConv2D<Scalar: TensorFlowFloatingPoint>: Layer {
         let mat = conv.filter.reshaped(to: [-1, outputDim])
         
         var u = Tensor<Scalar>(0)
+        var v = self.v.value
         for _ in 0..<numPowerIterations {
-            u = l2normalize(matmul(v.value, mat.transposed())) // [1, rows]
-            v.value = l2normalize(matmul(u, mat)) // [1, cols]
+            u = l2normalize(matmul(v, mat.transposed())) // [1, rows]
+            v = l2normalize(matmul(u, mat)) // [1, cols]
         }
         
-        let sigma = matmul(matmul(u, mat), v.value.transposed()) // [1, 1]
+        let sigma = matmul(matmul(u, mat), v.transposed()) // [1, 1]
+        
+        if Context.local.learningPhase == .training {
+            self.v.value = v
+        }
         
         // Should detach sigma?
         return conv.filter / sigma

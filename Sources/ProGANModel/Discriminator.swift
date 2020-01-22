@@ -32,7 +32,6 @@ public struct Discriminator: Layer {
     
     public var blocks: [DBlock] = []
     
-    
     public var minibatchStdConcat: MinibatchStdConcat<Float>
     
     public var lastConv: SNConv2D<Float>
@@ -110,7 +109,8 @@ public struct Discriminator: Layer {
             return x
         }
         
-        let startIndex = 8 - imageSize.log2
+        let blockCount = withoutDerivative(at: blocks.count)
+        let startIndex = blockCount + 1 - imageSize.log2
         
         var x2 = x
         x = fromRGBs[startIndex](x)
@@ -125,7 +125,6 @@ public struct Discriminator: Layer {
         
         x = blocks[startIndex+1](x)
         
-        let blockCount = withoutDerivative(at: blocks.count)
         for i in startIndex+2..<blockCount {
             x = avgPool(x)
             x = blocks[i](x)
