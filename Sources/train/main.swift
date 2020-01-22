@@ -29,8 +29,9 @@ let config = Config(
 var generator = Generator(config: config)
 var discriminator = Discriminator(config: config)
 
-var optG = Adam(for: generator, learningRate: config.learningRates.G, beta1: 0, beta2: 0.99)
-var optD = Adam(for: discriminator, learningRate: config.learningRates.D, beta1: 0, beta2: 0.99)
+// Use same optimizers through trainings to keep its momentums.
+let optG = Adam(for: generator, learningRate: config.learningRates.G, beta1: 0, beta2: 0.99)
+let optD = Adam(for: discriminator, learningRate: config.learningRates.D, beta1: 0, beta2: 0.99)
 
 // MARK: - Dataset
 let args = ProcessInfo.processInfo.arguments
@@ -169,13 +170,10 @@ func train(imageSize: ImageSize, phase: Phase) {
 }
 
 train(imageSize: config.startSize, phase: .stabilizing)
-for size in ImageSize.allCases {
-    guard size > config.startSize else {
-        continue
-    }
-    guard size <= config.endSize else {
-        break
-    }
+let sizes = ImageSize.allCases
+    .drop { $0 <= config.startSize }
+    .prefix { $0 <= config.endSize }
+for size in sizes {
     train(imageSize: size, phase: .fading)
     train(imageSize: size, phase: .stabilizing)
 }
