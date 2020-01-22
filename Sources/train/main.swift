@@ -39,7 +39,7 @@ guard args.count == 2 else {
     print("Image directory is not specified.")
     exit(1)
 }
-print("Seaerch images...")
+print("Search images...")
 let imageDir = URL(fileURLWithPath: args[1])
 let entries = [Entry](directory: imageDir)
 print("\(entries.count) images found")
@@ -169,6 +169,7 @@ func train(imageSize: ImageSize, phase: Phase) {
     }
 }
 
+print("Train from \(config.startSize.name) to \(config.endSize.name)")
 train(imageSize: config.startSize, phase: .stabilizing)
 let sizes = ImageSize.allCases
     .drop { $0 <= config.startSize }
