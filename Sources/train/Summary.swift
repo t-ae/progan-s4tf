@@ -4,8 +4,8 @@ import ProGANModel
 
 extension GBlock: HistogramWritable {
     public func writeHistograms(tag: String, writer: SummaryWriter, globalStep: Int?) {
-        conv1.conv.writeHistograms(tag: "\(tag).conv1", writer: writer)
-        conv2.conv.writeHistograms(tag: "\(tag).conv1", writer: writer)
+        conv1.conv.writeHistograms(tag: "\(tag).conv1", writer: writer, globalStep: globalStep)
+        conv2.conv.writeHistograms(tag: "\(tag).conv1", writer: writer, globalStep: globalStep)
     }
 }
 
@@ -30,8 +30,8 @@ extension Generator {
 
 extension DBlock: HistogramWritable {
     public func writeHistograms(tag: String, writer: SummaryWriter, globalStep: Int?) {
-        conv1.conv.writeHistograms(tag: "\(tag).conv1", writer: writer)
-        conv2.conv.writeHistograms(tag: "\(tag).conv1", writer: writer)
+        conv1.conv.writeHistograms(tag: "\(tag).conv1", writer: writer, globalStep: globalStep)
+        conv2.conv.writeHistograms(tag: "\(tag).conv1", writer: writer, globalStep: globalStep)
     }
 }
 

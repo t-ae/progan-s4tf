@@ -72,7 +72,6 @@ func train(imageSize: ImageSize, phase: Phase) {
     let tag = "\(imageSize.name)_\(phase)"
     let batchSize = config.batchSizes[imageSize]!
     let numberOfSteps = config.imagesPerPhase / batchSize
-    print("train: imageSize=\(imageSize), phase=\(phase), numberOfSteps=\(numberOfSteps)")
     
     generator.imageSize = imageSize
     discriminator.imageSize = imageSize
@@ -90,14 +89,17 @@ func train(imageSize: ImageSize, phase: Phase) {
         ]
     )
     
+    print("Start training.")
     Context.local.learningPhase = .training
     var step = 0
-    
     loop: while true {
         loader.shuffle()
         
         for batch in loader.iterator(batchSize: batchSize) {
-            print("step: \(step)")
+            if step % 10 == 0 {
+                print("imageSize:\(imageSize), phase:\(phase), step:\(step) / \(numberOfSteps)")
+            }
+            
             let reals = 2 * batch.images - 1
             
             if phase == .fading {
@@ -153,6 +155,7 @@ func train(imageSize: ImageSize, phase: Phase) {
     }
     
     // Inference
+    print("Training end. Start inference.")
     Context.local.learningPhase = .inference
     
     for (i, noise) in testRandomNoises.enumerated() {
