@@ -41,9 +41,6 @@ public struct Discriminator: Layer {
     public var avgPool = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
     
     @noDerivative
-    public private(set) var level = 1
-    
-    @noDerivative
     public var imageSize: ImageSize = .x4
     
     @noDerivative
@@ -93,6 +90,7 @@ public struct Discriminator: Layer {
         
         minibatchStdConcat = MinibatchStdConcat(groupSize: 4)
         lastConv = SNConv2D(Conv2D(filterShape: (3, 3, 257, 64),
+                                   padding: .same,
                                    activation: lrelu,
                                    filterInitializer: heNormal()),
                             enabled: enableSN)
@@ -107,8 +105,9 @@ public struct Discriminator: Layer {
             x = blocks[6](x)
             x = minibatchStdConcat(x)
             x = lastConv(x)
-            x = x.reshaped(to: [-1, 4*4*64])
-            return lastDense(x)
+            x = x.reshaped(to: [x.shape[0], 4*4*64])
+            x = lastDense(x)
+            return x
         }
         
         let startIndex = 8 - imageSize.log2
@@ -134,7 +133,8 @@ public struct Discriminator: Layer {
         
         x = minibatchStdConcat(x)
         x = lastConv(x)
-        x = x.reshaped(to: [-1, 4*4*64])
+        x = x.reshaped(to: [x.shape[0], 4*4*64])
+        x = lastDense(x)
         return x
     }
 }

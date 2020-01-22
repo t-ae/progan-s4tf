@@ -3,49 +3,58 @@ import XCTest
 import ProGANModel
 
 final class ProGANModelTests: XCTestCase {
+    let config = Config(
+        latentSize: 256,
+        normalizeLatent: true,
+        enableSpectralNorm: GDPair(G: false, D: true),
+        useTanhOutput: false,
+        loss: .hinge,
+        learningRates: GDPair(G: 1e-3, D: 1e-3),
+        startSize: .x4,
+        endSize: .x256,
+        batchSizes: [
+            .x4: 16,
+            .x8: 16,
+            .x16: 16,
+            .x32: 16,
+            .x64: 16,
+            .x128: 16,
+            .x256: 16,
+        ],
+        imagesPerPhase: 80_000
+    )
+    
     func testGeneratorSize() {
-        var gen = Generator()
+        var gen = Generator(config: config)
         
-        let noise = sampleNoise(size: 10)
+        let noise = sampleNoise(size: 8, latentSize: config.latentSize)
         
-        var size = 4
-        
-        for _ in 0..<7 {
+        for size in ImageSize.allCases {
+            gen.imageSize = size
             let image = gen(noise)
-            XCTAssertEqual(image.shape, [10, size, size, 3])
-            
-            if gen.level < 7 {
-                gen.grow()
-                size *= 2
-            }
+            XCTAssertEqual(image.shape, [8, size.rawValue, size.rawValue, 3])
         }
     }
     
     func testDiscriminatorSize() {
-        var dis = Discriminator()
-        
-        var size = 4
+        var dis = Discriminator(config: config)
                 
-        for _ in 0..<7 {
-            let image = Tensor<Float>(zeros: [8, size, size, 3])
+        for size in ImageSize.allCases {
+            dis.imageSize = size
+            let image = Tensor<Float>(zeros: [8, size.rawValue, size.rawValue, 3])
             let logits = dis(image)
             XCTAssertEqual(logits.shape, [8, 1])
-            
-            if dis.level < 7 {
-                dis.grow()
-                size *= 2
-            }
         }
     }
     
     func testGeneratorGrow() {
-        var generator = Generator()
-        let noise = sampleNoise(size: 10)
+        var generator = Generator(config: config)
+        let noise = sampleNoise(size: 10, latentSize: config.latentSize)
         
         var small = generator(noise)
         
-        for _ in 0..<6 {
-            generator.grow()
+        for size in ImageSize.allCases.dropFirst() {
+            generator.imageSize = size
             generator.alpha = 0
             let large = generator(noise)
             
@@ -57,19 +66,19 @@ final class ProGANModelTests: XCTestCase {
     }
     
     func testDiscriminatorGrow() {
-        var discriminator = Discriminator()
+        var discriminator = Discriminator(config: config)
         
-        var score1 = discriminator(Tensor<Float>(ones: [4, 4, 4, 3]))
+        var score1 = discriminator(Tensor<Float>(ones: [8, 4, 4, 3]))
         
-        for _ in 0..<6 {
-            discriminator.grow()
+        for size in ImageSize.allCases.dropFirst() {
+            discriminator.imageSize = size
             discriminator.alpha = 0
-            let size = Int(pow(2.0, Double(discriminator.level)) * 2)
             
-            let image = Tensor<Float>(ones: [4, size, size, 3])
+            let image = Tensor<Float>(ones: [8, size.rawValue, size.rawValue, 3])
             
             let score2 = discriminator(image)
             
+//            print(score1.scalars[0], score2.scalars[0])
             XCTAssertTrue(score1.isAlmostEqual(to: score2))
             
             discriminator.alpha = 1
@@ -78,89 +87,81 @@ final class ProGANModelTests: XCTestCase {
     }
     
     func testGeneratorDifferentiability() {
-        var gen = Generator()
-        for _ in 0..<3 {
-            gen.grow()
-        }
+        var gen = Generator(config: config)
+        gen.imageSize = .x16
         
         let df: (Tensor<Float>)->Tensor<Float> = gradient { x in
             gen(x).sum()
         }
         
-        let noise = sampleNoise(size: 1)
+        let noise = sampleNoise(size: 1, latentSize: config.latentSize)
         let grad = df(noise)
         XCTAssertEqual(grad.shape, noise.shape)
         
-        let dgen = gen.gradient { gen in
+        let dgen = gradient(at: gen) { gen in
             gen(noise).sum()
         }
         print(dgen.allKeyPaths)
     }
     
     func testDiscriminatorDifferentiability() {
-        var dis = Discriminator()
-        var size = 4
-        for _ in 0..<3 {
-            dis.grow()
-            size *= 2
-        }
+        var dis = Discriminator(config: config)
+        
+        let size = ImageSize.x16
+        dis.imageSize = size
         
         let df: (Tensor<Float>)->Tensor<Float> = gradient { x in
             dis(x).sum()
         }
         
-        let image = Tensor<Float>(zeros: [8, size, size, 3])
+        let image = Tensor<Float>(zeros: [8, size.rawValue, size.rawValue, 3])
         let grad = df(image)
         XCTAssertEqual(grad.shape, image.shape)
         
-        let ddis = dis.gradient { dis in
+        let ddis = gradient(at: dis) { dis in
             dis(image).sum()
         }
         print(ddis.allKeyPaths)
     }
     
     func testGeneratorTrainability() {
-        var gen = Generator()
-        var dis = Discriminator()
+        var gen = Generator(config: config)
+        var dis = Discriminator(config: config)
         
-        for _ in 0..<3 {
-            gen.grow()
-            dis.grow()
-        }
+        gen.imageSize = .x16
+        dis.imageSize = .x16
         
         let opt = Adam(for: gen)
-        let noise = sampleNoise(size: 8)
+        let noise = sampleNoise(size: 8, latentSize: config.latentSize)
         
-        let loss = Config.loss.createLoss()
+        let loss = GANLoss(type: config.loss)
         
-        let dgen = gen.gradient { gen -> Tensor<Float> in
+        let dgen = gradient(at: gen) { gen -> Tensor<Float> in
             let images = gen(noise)
             let logits = dis(images)
-            return loss.generatorLoss(fake: logits)
+            return loss.lossG(logits)
         }
         opt.update(&gen, along: dgen)
     }
     
     func testDiscriminatorTrainability() {
-        var gen = Generator()
-        var dis = Discriminator()
+        var gen = Generator(config: config)
+        var dis = Discriminator(config: config)
         
-        for _ in 0..<3 {
-            gen.grow()
-            dis.grow()
-        }
+        gen.imageSize = .x16
+        dis.imageSize = .x16
         
         let opt = Adam(for: dis)
-        let noise = sampleNoise(size: 8)
+        let noise = sampleNoise(size: 8, latentSize: config.latentSize)
         let fakeImages = gen(noise)
         let realImages = Tensor<Float>(zeros: fakeImages.shape)
         
-        let loss = Config.loss.createLoss()
+        let loss = GANLoss(type: config.loss)
         
-        let ddis = dis.gradient { dis -> Tensor<Float> in
+        let ddis = gradient(at: dis) { dis -> Tensor<Float> in
             let realLogits = dis(realImages)
             let fakeLogits = dis(fakeImages)
-            return loss.discriminatorLoss(real: realLogits, fake: fakeLogits)
+            return loss.lossD(real: realLogits, fake: fakeLogits)
         }
         opt.update(&dis, along: ddis)
     }

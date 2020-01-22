@@ -36,9 +36,6 @@ public struct Generator: Layer {
     public var lastActivation: ActivationSelector
     
     @noDerivative
-    public private(set) var level = 1
-    
-    @noDerivative
     public var imageSize: ImageSize = .x4
     
     @noDerivative
@@ -94,19 +91,18 @@ public struct Generator: Layer {
             x = pixelNormalization(x)
         }
         x = head(x) // 4x4x256
-        x = x.reshaped(to: [-1, 4, 4, 256])
-        
-        x = blocks[0](x)
+        x = x.reshaped(to: [x.shape[0], 4, 4, 256])
         
         guard imageSize > .x4 else {
+            x = blocks[0](x)
             x = toRGBs[0](x)
             x = lastActivation(x)
             return x
         }
         
         let endIndex = imageSize.log2 - 2
-        
-        for i in 0...endIndex-1 {
+        x = blocks[0](x)
+        for i in 1..<endIndex {
             x = resize2xBilinear(images: x)
             x = blocks[i](x)
         }

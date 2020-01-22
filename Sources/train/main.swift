@@ -23,7 +23,7 @@ let config = Config(
         .x128: 16,
         .x256: 16,
     ],
-    imagesPerPhase: 800_000
+    imagesPerPhase: 80_000
 )
 
 var generator = Generator(config: config)
