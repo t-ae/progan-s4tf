@@ -1,6 +1,13 @@
 import Foundation
 import TensorFlow
 
+public func heNormal<Scalar: TensorFlowFloatingPoint>() -> ParameterInitializer<Scalar> {
+    return { shape in
+        let out = shape.dimensions.dropLast().reduce(1, *)
+        return Tensor(randomNormal: shape) * sqrt(2 / Scalar(out))
+    }
+}
+
 @differentiable
 public func lrelu(_ x: Tensor<Float>) -> Tensor<Float> {
     leakyRelu(x)
@@ -58,5 +65,25 @@ public struct MinibatchStdConcat<Scalar: TensorFlowFloatingPoint>: Parameterless
         x = x.reshaped(to: [b, h, w, 1])
         
         return input.concatenated(with: x, alongAxis: 3)
+    }
+}
+
+public struct ActivationSelector: ParameterlessLayer {
+    public enum Activation {
+        case identity, tanh
+    }
+    public var activation: Activation
+    init(_ activation: Activation) {
+        self.activation = activation
+    }
+    
+    @differentiable
+    public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+        switch activation {
+        case .identity:
+            return input
+        case .tanh:
+            return tanh(input)
+        }
     }
 }

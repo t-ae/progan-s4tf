@@ -1,23 +1,25 @@
 import Foundation
 import TensorFlow
 
-struct GBlock: Layer {
-    var conv1: SNConv2D<Float>
-    var conv2: SNConv2D<Float>
+public struct GBlock: Layer {
+    public var conv1: SNConv2D<Float>
+    public var conv2: SNConv2D<Float>
     
-    init(inputChannels: Int, outputChannels: Int, enableSN: Bool) {
+    public init(inputChannels: Int, outputChannels: Int, enableSN: Bool) {
         conv1 = SNConv2D(Conv2D(filterShape: (3, 3, inputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu),
+                                activation: lrelu,
+                                filterInitializer: heNormal()),
                          enabled: enableSN)
         conv2 = SNConv2D(Conv2D(filterShape: (3, 3, outputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu),
+                                activation: lrelu,
+                                filterInitializer: heNormal()),
                          enabled: enableSN)
     }
     
     @differentiable
-    func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+    public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
         x = conv1(x)
         x = pixelNormalization(x)
@@ -28,9 +30,10 @@ struct GBlock: Layer {
 }
 
 public struct Generator: Layer {
-    var head: SNDense<Float>
-    var blocks: [GBlock] = []
-    var toRGBs: [SNConv2D<Float>] = []
+    public var head: SNDense<Float>
+    public var blocks: [GBlock] = []
+    public var toRGBs: [SNConv2D<Float>] = []
+    public var lastActivation: ActivationSelector
     
     @noDerivative
     public private(set) var level = 1
@@ -59,14 +62,29 @@ public struct Generator: Layer {
             GBlock(inputChannels: 16, outputChannels: 8, enableSN: enableSN), // 256x256
         ]
         toRGBs = [
-            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3), activation: identity), enabled: enableSN),
-            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3), activation: identity), enabled: enableSN),
-            SNConv2D(Conv2D(filterShape: (1, 1, 128, 3), activation: identity), enabled: enableSN),
-            SNConv2D(Conv2D(filterShape: (1, 1, 64, 3), activation: identity), enabled: enableSN),
-            SNConv2D(Conv2D(filterShape: (1, 1, 32, 3), activation: identity), enabled: enableSN),
-            SNConv2D(Conv2D(filterShape: (1, 1, 16, 3), activation: identity), enabled: enableSN),
-            SNConv2D(Conv2D(filterShape: (1, 1, 8, 3), activation: identity), enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3),
+                            filterInitializer: heNormal()),
+                     enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 256, 3),
+                            filterInitializer: heNormal()),
+                     enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 128, 3),
+                            filterInitializer: heNormal()),
+                     enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 64, 3),
+                            filterInitializer: heNormal()),
+                     enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 32, 3),
+                            filterInitializer: heNormal()),
+                     enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 16, 3),
+                            filterInitializer: heNormal()),
+                     enabled: enableSN),
+            SNConv2D(Conv2D(filterShape: (1, 1, 8, 3),
+                            filterInitializer: heNormal()),
+                     enabled: enableSN),
         ]
+        lastActivation = ActivationSelector(config.useTanhOutput ? .tanh : .identity)
     }
     
     @differentiable
@@ -82,6 +100,7 @@ public struct Generator: Layer {
         
         guard imageSize > .x4 else {
             x = toRGBs[0](x)
+            x = lastActivation(x)
             return x
         }
         
@@ -96,13 +115,15 @@ public struct Generator: Layer {
         
         x = resize2xBilinear(images: x)
         x = blocks[endIndex](x)
+        x = toRGBs[endIndex](x)
+        x = lastActivation(x)
         
         if alpha < 1 {
             x2 = toRGBs[endIndex-1](x2)
+            x2 = lastActivation(x2)
             x2 = resize2xBilinear(images: x2)
             x = lerp(x2, x, rate: alpha)
         }
         return x
     }
-    
 }

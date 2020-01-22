@@ -5,6 +5,7 @@ public struct Config: Codable {
     public var latentSize: Int
     public var normalizeLatent: Bool
     public var enableSpectralNorm: GDPair<Bool>
+    public var useTanhOutput: Bool
     
     // MARK: Training settings
     public var loss: GANLossType
@@ -18,6 +19,7 @@ public struct Config: Codable {
         latentSize: Int,
         normalizeLatent: Bool,
         enableSpectralNorm: GDPair<Bool>,
+        useTanhOutput: Bool,
         loss: GANLossType,
         learningRates: GDPair<Float>,
         startSize: ImageSize,
@@ -28,6 +30,7 @@ public struct Config: Codable {
         self.latentSize = latentSize
         self.startSize = startSize
         self.enableSpectralNorm = enableSpectralNorm
+        self.useTanhOutput = useTanhOutput
         self.endSize = endSize
         self.normalizeLatent = normalizeLatent
         self.loss = loss

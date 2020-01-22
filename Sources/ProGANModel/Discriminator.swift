@@ -1,23 +1,25 @@
 import Foundation
 import TensorFlow
 
-struct DBlock: Layer {
-    var conv1: SNConv2D<Float>
-    var conv2: SNConv2D<Float>
+public struct DBlock: Layer {
+    public var conv1: SNConv2D<Float>
+    public var conv2: SNConv2D<Float>
     
-    init(inputChannels: Int, outputChannels: Int, enableSN: Bool) {
+    public init(inputChannels: Int, outputChannels: Int, enableSN: Bool) {
         conv1 = SNConv2D(Conv2D(filterShape: (3, 3, inputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu),
+                                activation: lrelu,
+                                filterInitializer: heNormal()),
                          enabled: enableSN)
         conv2 = SNConv2D(Conv2D(filterShape: (3, 3, outputChannels, outputChannels),
                                 padding: .same,
-                                activation: lrelu),
+                                activation: lrelu,
+                                filterInitializer: heNormal()),
                          enabled: enableSN)
     }
     
     @differentiable
-    func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
+    public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
         x = conv1(x)
         x = conv2(x)
@@ -26,17 +28,17 @@ struct DBlock: Layer {
 }
 
 public struct Discriminator: Layer {
-    var fromRGBs: [SNConv2D<Float>] = []
+    public var fromRGBs: [SNConv2D<Float>] = []
     
-    var blocks: [DBlock] = []
+    public var blocks: [DBlock] = []
     
     
-    var minibatchStdConcat: MinibatchStdConcat<Float>
+    public var minibatchStdConcat: MinibatchStdConcat<Float>
     
-    var lastConv: SNConv2D<Float>
-    var lastDense: SNDense<Float>
+    public var lastConv: SNConv2D<Float>
+    public var lastDense: SNDense<Float>
     
-    var avgPool = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
+    public var avgPool = AvgPool2D<Float>(poolSize: (2, 2), strides: (2, 2))
     
     @noDerivative
     public private(set) var level = 1
@@ -48,15 +50,36 @@ public struct Discriminator: Layer {
     public var alpha: Float = 1.0
     
     public init(config: Config) {
-        let enableSN = config.enableSpectralNorm.G
+        let enableSN = config.enableSpectralNorm.D
         fromRGBs = [
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 8), activation: lrelu), enabled: enableSN), // 256x256
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 16), activation: lrelu), enabled: enableSN), // 128x128
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 32), activation: lrelu), enabled: enableSN), // 64x64
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 64), activation: lrelu), enabled: enableSN), // 32x32
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 128), activation: lrelu), enabled: enableSN), // 16x16
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu), enabled: enableSN), // 8x8
-            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256), activation: lrelu), enabled: enableSN), // 4x4
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 8),
+                            activation: lrelu,
+                            filterInitializer: heNormal()),
+                     enabled: enableSN), // 256x256
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 16),
+                            activation: lrelu,
+                            filterInitializer: heNormal()),
+                     enabled: enableSN), // 128x128
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 32),
+                            activation: lrelu,
+                            filterInitializer: heNormal()),
+                     enabled: enableSN), // 64x64
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 64),
+                            activation: lrelu,
+                            filterInitializer: heNormal()),
+                     enabled: enableSN), // 32x32
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 128),
+                            activation: lrelu,
+                            filterInitializer: heNormal()),
+                     enabled: enableSN), // 16x16
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256),
+                            activation: lrelu,
+                            filterInitializer: heNormal()),
+                     enabled: enableSN), // 8x8
+            SNConv2D(Conv2D(filterShape: (1, 1, 3, 256),
+                            activation: lrelu,
+                            filterInitializer: heNormal()),
+                     enabled: enableSN), // 4x4
         ]
         blocks = [
             DBlock(inputChannels: 8, outputChannels: 16, enableSN: enableSN), // 256x256
@@ -69,8 +92,11 @@ public struct Discriminator: Layer {
         ]
         
         minibatchStdConcat = MinibatchStdConcat(groupSize: 4)
-        lastConv = SNConv2D(Conv2D(filterShape: (3, 3, 257, 64), activation: lrelu), enabled: enableSN)
-        lastDense = SNDense(Dense(inputSize: 4*4*64, outputSize: 1 ), enabled: enableSN)
+        lastConv = SNConv2D(Conv2D(filterShape: (3, 3, 257, 64),
+                                   activation: lrelu,
+                                   filterInitializer: heNormal()),
+                            enabled: enableSN)
+        lastDense = SNDense(Dense(inputSize: 4*4*64, outputSize: 1, weightInitializer: heNormal()), enabled: enableSN)
     }
     
     @differentiable
@@ -87,12 +113,16 @@ public struct Discriminator: Layer {
         
         let startIndex = 8 - imageSize.log2
         
-        let x2 = fromRGBs[startIndex+1].callAsFunction(avgPool(x))
+        var x2 = x
         x = fromRGBs[startIndex](x)
         x = blocks[startIndex](x)
         x = avgPool(x)
         
-        x = lerp(x2, x, rate: alpha)
+        if alpha < 1 {
+            x2 = avgPool(x2)
+            x2 = fromRGBs[startIndex+1](x2)
+            x = lerp(x2, x, rate: alpha)
+        }
         
         x = blocks[startIndex+1](x)
         

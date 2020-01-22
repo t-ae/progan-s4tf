@@ -1,6 +1,6 @@
 import Foundation
 
-public enum ImageSize: Int, Codable {
+public enum ImageSize: Int, Codable, CaseIterable {
     case x4 = 4
     case x8 = 8
     case x16 = 16

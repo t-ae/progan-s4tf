@@ -8,7 +8,8 @@ import ProGANModel
 let config = Config(
     latentSize: 256,
     normalizeLatent: true,
-    enableSpectralNorm: GDPair(G: true, D: true),
+    enableSpectralNorm: GDPair(G: false, D: true),
+    useTanhOutput: false,
     loss: .hinge,
     learningRates: GDPair(G: 1e-3, D: 1e-3),
     startSize: .x4,
@@ -140,7 +141,8 @@ func train(imageSize: ImageSize, phase: Phase) {
             optG.update(&generator, along: 𝛁generator)
             
             if step % 1000 == 0 {
-                // Write historgrams
+                generator.writeHistograms(writer: writer, globalStep: step)
+                discriminator.writeHistograms(writer: writer, globalStep: step)
             }
             
             step += 1
@@ -164,7 +166,7 @@ func train(imageSize: ImageSize, phase: Phase) {
 }
 
 train(imageSize: config.startSize, phase: .stabilizing)
-for size in [ImageSize.x4, .x8, .x16, .x32, .x64, .x128, .x256] {
+for size in ImageSize.allCases {
     guard size > config.startSize else {
         continue
     }
