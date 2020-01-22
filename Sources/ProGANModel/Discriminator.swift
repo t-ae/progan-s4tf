@@ -1,5 +1,6 @@
 import Foundation
 import TensorFlow
+import GANUtils
 
 public struct DBlock: Layer {
     public var conv1: SNConv2D<Float>

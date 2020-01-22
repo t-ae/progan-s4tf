@@ -14,18 +14,7 @@ class ComponentTests: XCTestCase {
         print(grad4x4)
     }
     
-    func testPixelNorm() {
-        let length = 32
-        let tensor = Tensor<Float>(randomNormal: [1, length*length])
-        
-        let norm = pixelNormalization(tensor)
-        
-        let len = sqrt(norm.squared().sum())
-        
-        XCTAssert(len.isAlmostEqual(to: Tensor(Float(length))))
-    }
-    
     static let allTests = [
-        ("testPixelNorm", testPixelNorm)
+        ("testResize2xBilinear", testResize2xBilinear)
     ]
 }

@@ -6,6 +6,7 @@ import PackageDescription
 let package = Package(
     name: "ProGAN",
     dependencies: [
+        .package(url: "https://github.com/t-ae/gan-utils-s4tf.git", from: "0.1.0"),
         .package(url: "https://github.com/t-ae/image-loader.git", from: "0.1.8"),
         .package(url: "https://github.com/t-ae/tensorboardx-s4tf.git", from: "0.0.11"),
     ],
@@ -14,7 +15,7 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .target(
             name: "ProGANModel",
-            dependencies: []),
+            dependencies: ["GANUtils"]),
         .target(name: "train", dependencies: ["ProGANModel", "ImageLoader", "TensorBoardX"]),
         .testTarget(
             name: "ProGANModelTests",
