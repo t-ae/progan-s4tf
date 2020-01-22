@@ -11,7 +11,7 @@ extension GBlock: HistogramWritable {
 
 extension Generator {
     public func writeHistograms(writer: SummaryWriter, globalStep: Int) {
-        let tag = "G_\(imageSize.name)"
+        let tag = "\(imageSize.name)_G"
         head.dense.writeHistograms(tag: "\(tag)/head",
             writer: writer, globalStep: globalStep)
         let endIndex = imageSize.log2 - 2
@@ -37,7 +37,7 @@ extension DBlock: HistogramWritable {
 
 extension Discriminator {
     public func writeHistograms(writer: SummaryWriter, globalStep: Int) {
-        let tag = "D_\(imageSize.name)"
+        let tag = "\(imageSize.name)_D"
         let startIndex = 8 - imageSize.log2
         
         fromRGBs[startIndex].conv.writeHistograms(tag: "\(tag)/fromRGBs[\(startIndex)]",
