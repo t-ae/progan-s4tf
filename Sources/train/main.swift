@@ -15,15 +15,15 @@ let config = Config(
     startSize: .x4,
     endSize: .x256,
     batchSizes: [
-        .x4: 16,
-        .x8: 16,
-        .x16: 16,
-        .x32: 16,
-        .x64: 16,
+        .x4: 128,
+        .x8: 64,
+        .x16: 64,
+        .x32: 32,
+        .x64: 32,
         .x128: 16,
         .x256: 16,
     ],
-    imagesPerPhase: 80_000
+    imagesPerPhase: 800_000
 )
 
 var generator = Generator(config: config)

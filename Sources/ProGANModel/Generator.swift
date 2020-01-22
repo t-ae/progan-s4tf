@@ -89,7 +89,6 @@ public struct Generator: Layer {
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
         if config.normalizeLatent {
-            print(x.shape)
             x = pixelNormalization(x)
         }
         x = head(x) // 4x4x256
