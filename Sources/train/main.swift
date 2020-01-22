@@ -165,7 +165,7 @@ func train(imageSize: ImageSize, phase: Phase) {
     }
     for (i, noise) in testIntplNoises.enumerated() {
         let fakes = generator(noise)
-        plotImages(tag: "\(tag)/result_fakes", images: fakes, globalStep: i)
+        plotImages(tag: "\(tag)/result_intpl", images: fakes, globalStep: i)
     }
 }
 
