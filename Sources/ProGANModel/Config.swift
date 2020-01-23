@@ -14,6 +14,7 @@ public struct Config: Codable {
     public var endSize: ImageSize
     public var batchSizes: [ImageSize: Int]
     public var imagesPerPhase: Int
+    public var nDisUpdate: Int
     
     public init(
         latentSize: Int,
@@ -25,7 +26,8 @@ public struct Config: Codable {
         startSize: ImageSize,
         endSize: ImageSize,
         batchSizes: [ImageSize: Int],
-        imagesPerPhase: Int
+        imagesPerPhase: Int,
+        nDisUpdate: Int
     ) {
         self.latentSize = latentSize
         self.startSize = startSize
@@ -37,6 +39,7 @@ public struct Config: Codable {
         self.learningRates = learningRates
         self.batchSizes = batchSizes
         self.imagesPerPhase = imagesPerPhase
+        self.nDisUpdate = nDisUpdate
     }
 }
 

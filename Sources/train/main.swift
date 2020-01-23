@@ -23,7 +23,8 @@ let config = Config(
         .x128: 16,
         .x256: 16,
     ],
-    imagesPerPhase: 800_000
+    imagesPerPhase: 800_000,
+    nDisUpdate: 5
 )
 
 var generator = Generator(config: config)
@@ -72,7 +73,10 @@ enum Phase {
 func train(imageSize: ImageSize, phase: Phase) {
     let tag = "\(imageSize.name)_\(phase)"
     let batchSize = config.batchSizes[imageSize]!
-    let numberOfSteps = config.imagesPerPhase / batchSize
+    let numberOfSteps = (config.imagesPerPhase / batchSize) * config.nDisUpdate
+    
+    let fakePlotPeriod = 100 * config.nDisUpdate
+    let histogramPlotPeriod = 1000 * config.nDisUpdate
     
     generator.imageSize = imageSize
     discriminator.imageSize = imageSize
@@ -120,7 +124,7 @@ func train(imageSize: ImageSize, phase: Phase) {
                 let loss = criterion.lossD(real: realScores, fake: fakeScores)
                 
                 writer.addScalar(tag: "\(tag)_D/loss", scalar: loss.scalarized(), globalStep: step)
-                if step % 100 == 0 {
+                if step % fakePlotPeriod == 0 {
                     plotImages(tag: "\(tag)/reals", images: reals, globalStep: step)
                     plotImages(tag: "\(tag)/fakes", images: fakes, globalStep: step)
                     writer.flush()
@@ -131,19 +135,21 @@ func train(imageSize: ImageSize, phase: Phase) {
             optD.update(&discriminator, along: 𝛁discriminator)
             
             // Update Generator
-            let 𝛁generator = gradient(at: generator) { generator ->Tensor<Float> in
-                let fakes = generator(noise)
-                let scores = discriminator(fakes)
-                
-                let loss = criterion.lossG(scores)
-                
-                writer.addScalar(tag: "\(tag)_G/loss", scalar: loss.scalarized(), globalStep: step)
-                
-                return loss
+            if step % config.nDisUpdate == 0 {
+                let 𝛁generator = gradient(at: generator) { generator ->Tensor<Float> in
+                    let fakes = generator(noise)
+                    let scores = discriminator(fakes)
+                    
+                    let loss = criterion.lossG(scores)
+                    
+                    writer.addScalar(tag: "\(tag)_G/loss", scalar: loss.scalarized(), globalStep: step)
+                    
+                    return loss
+                }
+                optG.update(&generator, along: 𝛁generator)
             }
-            optG.update(&generator, along: 𝛁generator)
             
-            if step % 1000 == 0 {
+            if step % histogramPlotPeriod == 0 {
                 generator.writeHistograms(writer: writer, globalStep: step)
                 discriminator.writeHistograms(writer: writer, globalStep: step)
             }
