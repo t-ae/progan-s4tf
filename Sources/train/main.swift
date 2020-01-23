@@ -1,9 +1,11 @@
 import Foundation
 import Python
 import TensorFlow
+import GANUtils
 import ImageLoader
 import TensorBoardX
 import ProGANModel
+
 
 let config = Config(
     latentSize: 256,
@@ -45,7 +47,7 @@ let imageDir = URL(fileURLWithPath: args[1])
 let entries = [Entry](directory: imageDir)
 print("\(entries.count) images found")
 
-let criterion = GANLoss(type: config.loss)
+let criterion = GANLoss(config.loss)
 
 // Plot
 let logdir = URL(fileURLWithPath: "./logdir")

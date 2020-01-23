@@ -1,4 +1,5 @@
 import Foundation
+import GANUtils
 
 public struct Config: Codable {
     // MARK: Model settings
