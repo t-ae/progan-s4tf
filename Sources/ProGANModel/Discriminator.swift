@@ -100,9 +100,11 @@ public struct Discriminator: Layer {
     @differentiable
     public func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
         var x = input
+        let blockCount = withoutDerivative(at: blocks.count)
+        
         guard imageSize > .x4 else {
-            x = fromRGBs[6](x)
-            x = blocks[6](x)
+            x = fromRGBs[blockCount-1](x)
+            x = blocks[blockCount-1](x)
             x = minibatchStdConcat(x)
             x = lastConv(x)
             x = x.reshaped(to: [x.shape[0], 4*4*64])
@@ -110,7 +112,6 @@ public struct Discriminator: Layer {
             return x
         }
         
-        let blockCount = withoutDerivative(at: blocks.count)
         let startIndex = blockCount + 1 - imageSize.log2
         
         var x2 = x
